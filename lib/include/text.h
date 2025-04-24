@@ -3,7 +3,7 @@
 
 typedef struct text Text
 
-Text *createText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
+Text *createText(SDL_Renderer *renderer, int r, int g, int b,TTF_Font *font, char *pString, int x, int y);
 void drawText(Text *pText);
 void destroyText(Text *pText);
 

@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -84,7 +85,10 @@ int main(int argc, char** argv) {
         ball.y = (int)ballY;
 
         // Ball collision with top/bottom
-        if (ball.y <= 0 || ball.y >= WINDOW_HEIGHT - BALL_SIZE) ballVelY = -ballVelY;
+        if (ball.y <= 0 || ball.y >= WINDOW_HEIGHT - BALL_SIZE){
+            ballVelY = -ballVelY;
+            SDL_PlaySoundEffect(NULL, NULL, 0);
+        }
 
         // Ball collision with paddles
         if (SDL_HasIntersection(&ball, &leftPaddle) || SDL_HasIntersection(&ball, &rightPaddle)) {
@@ -96,7 +100,6 @@ int main(int argc, char** argv) {
             rightScore++;
             if (rightScore >= 3) {
                 printf("Right Player Wins! Final Score: %d - %d\n", leftScore, rightScore);
-                isRunning = false; // End game
             }
             ballX = WINDOW_WIDTH / 2 - BALL_SIZE / 2;
             ballY = WINDOW_HEIGHT / 2 - BALL_SIZE / 2;
@@ -106,7 +109,6 @@ int main(int argc, char** argv) {
             leftScore++;
             if (leftScore >= 3) {
                 printf("Left Player Wins! Final Score: %d - %d\n", leftScore, rightScore);
-                isRunning = false; // End game
             }
             ballX = WINDOW_WIDTH / 2 - BALL_SIZE / 2;
             ballY = WINDOW_HEIGHT / 2 - BALL_SIZE / 2;

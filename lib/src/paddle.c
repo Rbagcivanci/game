@@ -2,8 +2,9 @@
 #include <SDL2/SDL_image.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include "paddle.h"
+#include "ball.h"
+#include "paddle_data.h"
 
 #define PADDLE_HEIGHT 60
 #define PADDLE_WIDTH 10
@@ -11,10 +12,11 @@
 
 struct paddle{
     float velocityY;
-    int positionX, positionY;
+    int positionX, positionY, team;
+    Ball *pBall;
     SDL_Renderer *paddleRenderer;    
     SDL_Texture *paddleTexture;
-    SDL_Rect paddleRect;
+    SDL_Rect paddleRect; 
 };
 
 Paddle *createPaddle(int number, SDL_Renderer *pRenderer, int window_width, int window_height){
@@ -25,8 +27,9 @@ Paddle *createPaddle(int number, SDL_Renderer *pRenderer, int window_width, int 
         return NULL;
     }
 
-    pPaddle->paddleRect.w= PADDLE_WIDTH;
-    pPaddle->paddleRect.h= PADDLE_HEIGHT;
+    pPaddle->paddleRect.w = PADDLE_WIDTH;
+    pPaddle->paddleRect.h = PADDLE_HEIGHT;
+    setStartingPosition(pPaddle, playerIndex, w, h);
 
     SDL_Surface *paddleSurface = IMG_Load("");
     if(!paddleSurface){
@@ -120,6 +123,3 @@ void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2){
         }
     }
 }
-
-
-
