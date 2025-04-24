@@ -112,14 +112,22 @@ void destroyPaddle(Paddle *pPaddle){
 }
 
 void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2){
-    if(SDL_HasIntersection(&pPaddle1->paddleRect, &pPaddle2->paddleRect)){
-        if(pPaddle1->velocityY > 0 && pPaddle2->velocityY < 0){
-            pPaddle1->velocityY = -pPaddle1->velocityY;
-            pPaddle2->velocityY = -pPaddle2->velocityY;
-        }
-        else if(pPaddle1->velocityY < 0 && pPaddle2->velocityY > 0){
-            pPaddle1->velocityY = -pPaddle1->velocityY;
-            pPaddle2->velocityY = -pPaddle2->velocityY;
-        }
+    SDL_Rect rect1 = getPaddleRect(pPaddle1);
+    SDL_Rect rect2 = getPaddleRect(pPaddle2);
+
+    if(checkCollsion(rect1, rect2)){
+
     }
+}
+
+void getPlayerSendData(Paddle *pPaddle, PaddleData *pData){
+    pPaddleData->velocityY = pPaddle->velocityY;
+    pPaddleData->positionX = pPaddle->paddleRect.x;
+    pPaddleData->positionY = pPaddle->paddleRect.y;
+}
+
+void updatePlayerWithRecievedData(Paddle *pPaddle, PaddleData *pData){
+    pPaddle->velocityY = pData->velocityY;
+    pPaddle->paddleRect.x = pData->positionX;
+    pPaddle->paddleRect.y = pData->positionY;
 }
