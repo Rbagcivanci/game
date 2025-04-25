@@ -1,5 +1,5 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <SDL.h>
+#include <SDL_image.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "paddle.h"
@@ -19,7 +19,7 @@ struct paddle{
     SDL_Rect paddleRect; 
 };
 
-Paddle *createPaddle(int number, SDL_Renderer *pRenderer, int window_width, int window_height){
+Paddle *createPaddle(SDL_Renderer *pRenderer, int window_width, int window_height, int paddleIndex){
     Paddle *pPaddle = malloc(sizeof(Paddle));
     
     if(!pPaddle){
@@ -29,19 +29,19 @@ Paddle *createPaddle(int number, SDL_Renderer *pRenderer, int window_width, int 
 
     pPaddle->paddleRect.w = PADDLE_WIDTH;
     pPaddle->paddleRect.h = PADDLE_HEIGHT;
-    setStartingPosition(pPaddle, playerIndex, w, h);
+    setStartingPosition(pPaddle, paddleIndex, window_width, window_height);
 
-    SDL_Surface *paddleSurface = IMG_Load("");
+    SDL_Surface *paddleSurface = IMG_Load("../lib/resources/ball2.png");
     if(!paddleSurface){
         printf("Error: %s\n",IMG_GetError());
         free(pPaddle);
         return NULL;
     }
 
-    pPaddle->paddleTexture = SDL_CreateTextureFromSurface();
+    pPaddle->paddleTexture = SDL_CreateTextureFromSurface(pRenderer, paddleSurface);
+    SDL_FreeSurface(paddleSurface); // Free the surface after creating the texture
     if(!pPaddle->paddleTexture){
         printf("Error: %s\n",SDL_GetError());
-        SDL_FreeSurface(paddleSurface);
         free(pPaddle);
         return NULL;
     }
@@ -83,15 +83,16 @@ void updatePaddlePos(Paddle *pPaddle, float t){
     setPaddlePosition(pPaddle, newX, newY);
 }
 
-void setStartingPosition(Paddle *pPaddle, int playerIndex, int w, int h){
-    switch(playerIndex){
+void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h){
+    pPaddle->velocityY = 0;
+    switch(paddleIndex){
         case 0:
             pPaddle->paddleRect.x = w/4 - pPaddle->paddleRect.w/2;
             pPaddle->paddleRect.y = h/2;
             break;
         case 1:
             pPaddle->paddleRect.x = w/4 - pPaddle->paddleRect.w/2 + w/2;
-            pPaddle->paddleRect.y = h/2
+            pPaddle->paddleRect.y = h/2;
             break;
         case 2:
             pPaddle->paddleRect.x = w/5 - pPaddle->paddleRect.w/2;
@@ -114,20 +115,24 @@ void destroyPaddle(Paddle *pPaddle){
 void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2){
     SDL_Rect rect1 = getPaddleRect(pPaddle1);
     SDL_Rect rect2 = getPaddleRect(pPaddle2);
-
-    if(checkCollsion(rect1, rect2)){
-
-    }
 }
 
 void getPlayerSendData(Paddle *pPaddle, PaddleData *pData){
-    pPaddleData->velocityY = pPaddle->velocityY;
-    pPaddleData->positionX = pPaddle->paddleRect.x;
-    pPaddleData->positionY = pPaddle->paddleRect.y;
+    pData->velocityY = pPaddle->velocityY;
+    pData->positionX = pPaddle->paddleRect.x;
+    pData->positionY = pPaddle->paddleRect.y;
 }
 
 void updatePlayerWithRecievedData(Paddle *pPaddle, PaddleData *pData){
     pPaddle->velocityY = pData->velocityY;
     pPaddle->paddleRect.x = pData->positionX;
     pPaddle->paddleRect.y = pData->positionY;
+}
+
+void restrictPlayerWithinWindow(Paddle *pPaddle, int w, int h){
+    if(pPaddle->paddleRect.y < 0){
+        pPaddle->paddleRect.y = 0;
+    } else if(pPaddle->paddleRect.y + PADDLE_HEIGHT > h){
+        pPaddle->paddleRect.y = h - PADDLE_HEIGHT;
+    }
 }

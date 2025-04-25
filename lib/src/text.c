@@ -1,30 +1,30 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL.h>
+#include <SDL_ttf.h>
 #include "text.h"
 
 struct text {
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
+    SDL_Renderer *pRenderer;
+    SDL_Texture *pTexture;
     SDL_Rect rect;
 };
 
-Text *createText(SDL_Renderer *renderer, int r, int g, int b, TTF_Font *font, const char *text, int x, int y){
+Text *createText(SDL_Renderer *pRenderer, int r, int g, int b,TTF_Font *pFont, char *pString, int x, int y){
     Text *pText = (Text *)malloc(sizeof(Text));
-    pText->pRenderer=pRenderer;
+    pText->pRenderer = pRenderer;
     SDL_Color color = { r, g, b };
-    SDL_Surface *surface = TTF_RenderText_Solid(pFont, pString, color);
+    SDL_Surface *pSurface = TTF_RenderText_Solid(pFont, pString, color);
     if (!pSurface){
         printf("Error: %s\n", SDL_GetError());
         return NULL;
     }
-    pText->pTexture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
+    pText->pTexture = SDL_CreateTextureFromSurface(pRenderer, pSurface);
+    SDL_FreeSurface(pSurface);
     if (!pText->pTexture) {
         printf("Error: %s\n", SDL_GetError());
         return NULL;
     }
 
-    SDL_QueryTexture(pText->texture, NULL, NULL, &pText->rect.w, &pText->rect.h);
+    SDL_QueryTexture(pText->pTexture, NULL, NULL, &pText->rect.w, &pText->rect.h);
     pText->rect.x = x - pText->rect.w / 2;
     pText->rect.y = y - pText->rect.h / 2;
 
@@ -32,11 +32,11 @@ Text *createText(SDL_Renderer *renderer, int r, int g, int b, TTF_Font *font, co
 }
 
 void drawText(Text *pText) {
-    SDL_RenderCopy(pText->renderer, pText->texture, NULL, &pText->rect);
+    SDL_RenderCopy(pText->pRenderer, pText->pTexture, NULL, &pText->rect);
 }
 
 void destroyText(Text *pText) {
-    SDL_DestroyTexture(pText->texture);
+    SDL_DestroyTexture(pText->pTexture);
     free(pText);
 }
 

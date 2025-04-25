@@ -1,6 +1,8 @@
 #ifndef ball_h
 #define ball_h
 
+#include <stdbool.h>
+
 typedef struct ball Ball;
 typedef struct ballData BallData;
 
@@ -16,7 +18,8 @@ int checkGoal(Ball *pBall);
 int goalScored(Ball *pBall);
 void handlePaddleBallCollision(SDL_Rect paddleRect, SDL_Rect ballRect, Ball *pBall);
 void restrictBallWithinWindow(Ball *pBall);
-//void sendBallData(Ball *pBall, BallData *pBallData);
-//void updateBallWithRecievedData(Ball *pBall, BallData *pBallData);
+void sendBallData(Ball *pBall, BallData *pBallData);
+void updateBallWithRecievedData(Ball *pBall, BallData *pBallData);
+
 
 #endif // BALL_H

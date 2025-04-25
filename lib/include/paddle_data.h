@@ -3,7 +3,9 @@
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 960
-#define MAX_PLAYERS 2
+#define MAX_PADDLES 2
+
+#include <stdbool.h>
 
 enum gameState{START, ONGOING, GAME_OVER};
 typedef enum gameState GameState;
@@ -14,7 +16,7 @@ typedef enum clientCommand ClientCommand;
 typedef struct clientData{
     ClientCommand command;
     int clientNumber;
-} clientData;
+} ClientData;
 
 typedef struct ballData{
     float velocityY, velocityX;
@@ -27,11 +29,11 @@ typedef struct paddleData{
 } PaddleData;
 
 typedef struct serverData{
-    PaddleData paddles[MAX_PLAYERS];
+    PaddleData paddles[MAX_PADDLES];
     BallData ball;
     int clientNr;
     GameState gState;
-    bool connected[MAX_PLAYERS];
-} serverData;
+    bool connected[MAX_PADDLES];
+} ServerData;
 
 #endif

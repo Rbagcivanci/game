@@ -1,10 +1,8 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <math.h>
+#include <SDL.h>
+#include "paddle_data.h"
 #include "ball.h"
+#include <SDL_image.h>
+#include <stdbool.h>
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 960
@@ -21,13 +19,13 @@ struct ball {
 Ball *createBall(SDL_Renderer *renderer) {
     Ball *pBall = malloc(sizeof(Ball)); //Allokera minne till boll
     if (!pBall){
-        printf("Error: %s\n", SDL_GetError());
+        fprintf(stderr, "Failed to allocate memory for pBall.\n");
         return NULL;
     }
 
-    pBall->surface = IMG_Load("../lib/resources/ball.png"); // Surface med bild
+    pBall->ballSurface = IMG_Load("C:/Users/ahmed/game/lib/resources/ball2.png"); // Surface med bild
     if (!pBall->ballSurface) { //Om bild inte lyckas skapas --> felmeddelande, släpp minne och returnera NULL
-        printf("Error: %s\n", SDL_GetError());
+        fprintf(stderr, "Error loading pBall texture: %s\n", SDL_GetError());
         free(pBall);
         return NULL;
     }
@@ -35,7 +33,7 @@ Ball *createBall(SDL_Renderer *renderer) {
     pBall->ballTexture = SDL_CreateTextureFromSurface(renderer, pBall->ballSurface); //Skapa textur från ytan
     SDL_FreeSurface(pBall->ballSurface); //Släpp ytan efter att texturen skapats
     if (!pBall->ballTexture) { //Om texturen inte lyckas skapas --> felmeddelande, släpp minne och returnera NULL
-        printf("Error: %s\n", SDL_GetError());
+        fprintf(stderr, "Error creating pBall texture: %s\n", SDL_GetError());
         free(pBall);
         return NULL;
     }
@@ -102,4 +100,18 @@ int goalScored(Ball *pBall){
         setBallVelocity(pBall, BALL_SPEED, BALL_SPEED); //Sätt hastighet på bollen
         return 1; //Höger mål
     }
+}
+
+void updateBallWithRecievedData(Ball *pBall, BallData *pBallData){
+    pBall->velocityX = pBallData->velocityX; //Uppdatera hastighet på bollen
+    pBall->velocityY = pBallData->velocityY;
+    pBall->ballRect.x = pBallData->positionX; //Uppdatera position på bollen
+    pBall->ballRect.y = pBallData->positionY;
+}
+
+void sendBallData(Ball *pBall, BallData *pBallData){
+    pBallData->velocityX = pBall->velocityX; //Skicka hastighet på bollen
+    pBallData->velocityY = pBall->velocityY;
+    pBallData->positionX = pBall->ballRect.x; //Skicka position på bollen
+    pBallData->positionY = pBall->ballRect.y;
 }
