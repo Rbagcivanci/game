@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_net.h>
 #include <termios.h>
 #include <fcntl.h>
 
@@ -27,21 +27,34 @@ int main(int argc, char** argv) {
     const char* server_ip = argv[1];
     int server_port = atoi(argv[2]);
 
+    // Initiera SDL och SDL_net
+    if (SDL_Init(0) < 0) {
+        fprintf(stderr, "Failed to initialize SDL: %s\n", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
+    if (SDLNet_Init() < 0) {
+        fprintf(stderr, "Failed to initialize SDL_net: %s\n", SDLNet_GetError());
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
+
     // Skapa UDP socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("Failed to create socket");
+    UDPsocket sock = SDLNet_UDP_Open(0);
+    if (!sock) {
+        fprintf(stderr, "Failed to create UDP socket: %s\n", SDLNet_GetError());
+        SDLNet_Quit();
+        SDL_Quit();
         return EXIT_FAILURE;
     }
 
     // Konfiguera server address
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(server_port);
-    if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
-        perror("Invalid server IP address");
-        close(sockfd);
+    IPaddress server_addr;
+    if (SDLNet_ResolveHost(&server_addr, server_ip, server_port) < 0) {
+        fprintf(stderr, "Failed to resolve server address: %s\n", SDLNet_GetError());
+        SDLNet_UDP_Close(sock);
+        SDLNet_Quit();
+        SDL_Quit();
         return EXIT_FAILURE;
     }
 
@@ -51,30 +64,44 @@ int main(int argc, char** argv) {
     printf("Connected to Pong server. Use 'w' to move up and 's' to move down.\n");
 
     char buffer[BUFFER_SIZE];
-    socklen_t server_addr_len = sizeof(server_addr);
+    UDPpacket* packet = SDLNet_AllocPacket(BUFFER_SIZE);
+    if (!packet) {
+        fprintf(stderr, "Failed to allocate packet: %s\n", SDLNet_GetError());
+        SDLNet_UDP_Close(sock);
+        SDLNet_Quit();
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
 
     while (1) {
-        //Checka user input 
+        // Checka user input
         char input = getchar();
         if (input == 'w' || input == 's') {
             // Skicka input till servern
-            if (sendto(sockfd, &input, sizeof(input), 0, (struct sockaddr*)&server_addr, server_addr_len) < 0) {
-                perror("Failed to send input to server");
+            packet->data[0] = input;
+            packet->len = 1;
+            packet->address = server_addr;
+
+            if (SDLNet_UDP_Send(sock, -1, packet) == 0) {
+                fprintf(stderr, "Failed to send input to server: %s\n", SDLNet_GetError());
                 break;
             }
         }
 
         // Motta meddelande från servern
-        int bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0, (struct sockaddr*)&server_addr, &server_addr_len);
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
+        if (SDLNet_UDP_Recv(sock, packet)) {
+            packet->data[packet->len] = '\0'; // Null-terminate the received data
             // Visa uppdaterad information från servern (som exempelvis poäng eller position)
-            printf("\r%s", buffer);
+            printf("\r%s", (char*)packet->data);
             fflush(stdout);
         }
     }
 
-    // Stäng socket
-    close(sockfd);
+    // Stäng socket och frigör resurser
+    SDLNet_FreePacket(packet);
+    SDLNet_UDP_Close(sock);
+    SDLNet_Quit();
+    SDL_Quit();
+
     return EXIT_SUCCESS;
-}  
+}
