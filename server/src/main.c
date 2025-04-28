@@ -12,8 +12,9 @@
 
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
-//#define SPEED 5
+#define SPEED 5
 #define MIDDLE_FIELD 440
+#define BALL_SIZE 10
 
 typedef struct game {
     SDL_Window *pWindow;
@@ -29,7 +30,7 @@ typedef struct game {
     ServerData serverData;
 
     bool connected[MAX_PADDLES];
-    int teamScores[1];
+    int teamScores[2];
     int nrOfClients, nrOfPaddles;
 
     UDPsocket pSocket;
@@ -185,9 +186,10 @@ void run(Game *pGame){
                 }
 
                 for(int i = 0; i<MAX_PADDLES; i++){
-                    updatePaddlePosition(pGame->pPaddle[i], 1);
+                    updatePaddlePosition(pGame->pPaddle[i], deltaTime);
                     restrictPaddleWithinWindow(pGame->pPaddle[i], WINDOW_WIDTH, WINDOW_HEIGHT);
                 }
+                updateBallPosition(pGame->pBall);
                 for(int i=0; i<=1; i++){
                     if(pGame->teamScores[i] > 5){
                         pGame->state = GAME_OVER;
@@ -349,6 +351,10 @@ void setUpGame(Game *pGame){
     for(int i = 0; i < pGame->nrOfPaddles; i++){
         setStartingPosition(pGame->pPaddle[i], i, WINDOW_WIDTH, WINDOW_HEIGHT);
     }
+    setBallX(pGame->pBall, WINDOW_WIDTH/2 - BALL_SIZE/2);
+    setBallY(pGame->pBall, WINDOW_HEIGHT/2 - BALL_SIZE/2);
+    float initialVelocityX = ((rand() % 2 == 0) ? -1 : 1) * SPEED;
+    float initialVelocityY = ((rand() % 2 == 0) ? -1 : 1) * SPEED;
     pGame->nrOfPaddles = MAX_PADDLES;
     pGame->state = ONGOING;
 }

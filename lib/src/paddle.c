@@ -11,7 +11,7 @@
 #define NORTH_PADDLE_BORDER 0
 #define SOUTH_PADDLE_BORDER 800
 
-#define MOVEMENT_SPEED 50
+#define MOVEMENT_SPEED 1
 
 struct paddle {
     float velocityX, velocityY;
@@ -64,19 +64,19 @@ SDL_Rect getPaddleRect(Paddle *pPaddle) {
 }
 
 void updatePaddleVUp(Paddle *pPaddle) {
-    pPaddle->velocityY = -MOVEMENT_SPEED;
+    pPaddle->paddleRect.y -=MOVEMENT_SPEED;
 }
 
 void updatePaddleVDown(Paddle *pPaddle) {
-    pPaddle->velocityY = MOVEMENT_SPEED;
+    pPaddle->paddleRect.y += MOVEMENT_SPEED;
 }
 
 void updatePaddleVLeft(Paddle *pPaddle) {
-    pPaddle->velocityX = -MOVEMENT_SPEED;
+    pPaddle->paddleRect.x -=MOVEMENT_SPEED;
 }
 
 void updatePaddleVRight(Paddle *pPaddle) {
-    pPaddle->velocityX = MOVEMENT_SPEED;
+    pPaddle->paddleRect.x += MOVEMENT_SPEED;
 }
 
 void resetPaddleSpeed(Paddle *pPaddle, int x, int y) {

@@ -32,7 +32,8 @@ typedef struct game {
 
     char pIp[50];
 
-    int teamScores[1];
+    int teamScores[2];
+    int teamA, teamB;
     int nrOfPaddles, paddleNr;
 
     UDPsocket pSocket;
@@ -227,7 +228,8 @@ void run(Game *pGame){
                     updatePaddlePosition(pGame->pPaddle[i], deltaTime);
                     restrictPaddleWithinWindow(pGame->pPaddle[i], WINDOW_WIDTH, WINDOW_HEIGHT);
                 }
-
+                updateBallPosition(pGame->pBall);
+                restrictBallWithinWindow(pGame->pBall);
                 for (int i = 0; i < pGame->nrOfPaddles - 1; i++){
                     for(int j = i + 1; j < pGame->nrOfPaddles; j++){
                         handlePaddleCollision(pGame->pPaddle[i], pGame->pPaddle[j]);
@@ -308,7 +310,7 @@ void run(Game *pGame){
                         }
                     }
                 }
-                if(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
+                while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
                     updateWithServerData(pGame);
                     if(pGame->state == ONGOING){
                         joining = 0;
@@ -437,12 +439,13 @@ void updateWithServerData(Game *pGame){
     memcpy(&serverData, pGame->pPacket->data, sizeof(ServerData));
     pGame->paddleNr = serverData.clientNr;
     pGame->state = serverData.gState;
+    pGame->teamA=serverData.teamScores[0];
+    pGame->teamB=serverData.teamScores[1];
 
-    for(int i = 0; i < MAX_PADDLES; i++){
-        if(i != pGame->paddleNr){
-            updatePaddleWithRecievedData(pGame->pPaddle[i], &(serverData.paddles[i]));
-            pGame->connected[i] = serverData.connected[i];
-        }
+    for(int i = 0; i < MAX_PADDLES; i++)
+    {
+        updatePaddleWithRecievedData(pGame->pPaddle[i], &(serverData.paddles[i]));
+        pGame->connected[i] = serverData.connected[i];
     }
     updateBallWithRecievedData(pGame->pBall, &(serverData.ball));
 }
@@ -451,7 +454,68 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
     ClientData clientData;
     clientData.clientNumber = pGame->paddleNr;
 
-    if(pEvent->type == SDL_KEYDOWN){
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+    bool sendUpdate = false;
+
+    if(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_UP]){
+        updatePaddleVUp(pGame->pPaddle[pGame->paddleNr]);
+        clientData.command = UP;
+        sendUpdate = true;
+    }
+    if(state[SDL_SCANCODE_S] || state[SDL_SCANCODE_DOWN]){
+        updatePaddleVDown(pGame->pPaddle[pGame->paddleNr]);
+        clientData.command = DOWN;
+        sendUpdate = true;
+    }
+    if(state[SDL_SCANCODE_A] || state[SDL_SCANCODE_LEFT]){
+        updatePaddleVLeft(pGame->pPaddle[pGame->paddleNr]);
+        clientData.command = LEFT;
+        sendUpdate = true;
+    }
+    if(state[SDL_SCANCODE_D] || state[SDL_SCANCODE_RIGHT]){
+        updatePaddleVRight(pGame->pPaddle[pGame->paddleNr]);
+        clientData.command = RIGHT;
+        sendUpdate = true;
+    }
+
+    if(sendUpdate){
+        memcpy(pGame->pPacket->data, &clientData, sizeof(ClientData));
+        pGame->pPacket->len = sizeof(ClientData);
+        SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
+    }
+
+    if(pEvent->type == SDL_KEYUP){
+        bool sendReset=false;
+        switch(pEvent->key.keysym.scancode){
+            case SDL_SCANCODE_W:
+            case SDL_SCANCODE_UP:
+            case SDL_SCANCODE_S:
+            case SDL_SCANCODE_DOWN:
+                if(!state[SDL_SCANCODE_W] && !state[SDL_SCANCODE_UP] && !state[SDL_SCANCODE_S] && !state[SDL_SCANCODE_DOWN]){
+                    resetPaddleSpeed(pGame->pPaddle[pGame->paddleNr], 0, 1);
+                    clientData.command = RESET_VELOCITY_Y;
+                    sendReset = true;
+                }
+                break;
+            case SDL_SCANCODE_A:
+            case SDL_SCANCODE_LEFT:
+            case SDL_SCANCODE_D:
+            case SDL_SCANCODE_RIGHT:
+                if(!state[SDL_SCANCODE_A] && !state[SDL_SCANCODE_LEFT] && !state[SDL_SCANCODE_D] && !state[SDL_SCANCODE_RIGHT]){
+                    resetPaddleSpeed(pGame->pPaddle[pGame->paddleNr], 1, 0);
+                    clientData.command = RESET_VELOCITY_X;
+                    sendReset = true;
+                }
+                break;
+        }
+        if(sendReset){
+            memcpy(pGame->pPacket->data, &clientData, sizeof(ClientData));
+            pGame->pPacket->len = sizeof(ClientData);
+            SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
+        }
+
+    }
+    /*if(pEvent->type == SDL_KEYDOWN){
         switch(pEvent->key.keysym.scancode){
             case SDL_SCANCODE_W:
             case SDL_SCANCODE_UP:
@@ -502,7 +566,7 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
             pGame->pPacket->len = sizeof(ClientData);
             SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
         }
-    }
+    }*/
 }
 
 void handleGameOverText(Game *pGame){

@@ -34,6 +34,7 @@ typedef struct serverData{
     int clientNr;
     GameState gState;
     bool connected[MAX_PADDLES];
+    int teamScores[1];
 } ServerData;
 
 #endif

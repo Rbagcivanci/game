@@ -20,19 +20,17 @@ typedef enum
 
 int main(int argc, char **argv)
 {
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
         printf("SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
 
-    if (TTF_Init() < 0)
-    {
-        printf("TTF_Init failed: %s\n", TTF_GetError());
-        SDL_Quit();
-        return 1;
+    if(TTF_Init()!= 0){
+        printf("Error: %s\n",SDL_GetError());
+        return 0;
     }
-
+    printf("SDL initialized successfully\n");
     SDL_Window *window = SDL_CreateWindow("Pong", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     if (!window)
     {
@@ -41,7 +39,7 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
-
+    printf("Window created successfully\n");
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     if (!renderer)
     {
@@ -51,8 +49,8 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
-
-    TTF_Font *font = TTF_OpenFont("C:/Windows/Fonts/arial.ttf", 24);
+    printf("Renderer created successfully\n");
+    TTF_Font *font = TTF_OpenFont("C:/Users/ahmed/game/lib/resources/Fonts/arial.ttf", 24);
     if (!font)
     {
         printf("TTF_OpenFont failed: %s\n", TTF_GetError());
@@ -62,9 +60,9 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
-
+    printf("Font loaded successfully\n");
     // musiken
-    Mix_Music *music;
+    /*Mix_Music *music;
     Mix_Chunk *soundEffect;
     int frequency = MIX_DEFAULT_FREQUENCY;
     Uint16 format = MIX_DEFAULT_FORMAT;
@@ -81,7 +79,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    music = Mix_LoadMUS("../lib/resources/GameMusic.mp3");
+    music = Mix_LoadMUS("C:/Users/ahmed/game/lib/resources/GameMusic.mp3");
     Mix_VolumeMusic(8);
     if (!music)
     {
@@ -93,11 +91,11 @@ int main(int argc, char **argv)
         printf("musiken Spelas!");
     }
 
-    soundEffect = Mix_LoadWAV("../lib/resources/Boom.mp3");
+    soundEffect = Mix_LoadWAV("C:/Users/ahmed/game/lib/resources/Boom.mp3");
     if (!soundEffect)
     {
         printf("Mix_LoadWAV failed: %s\n", Mix_GetError());
-    }
+    }*/
 
     // Game objects
     SDL_Rect leftPaddle = {20, WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2, PADDLE_WIDTH, PADDLE_HEIGHT};
@@ -127,7 +125,7 @@ int main(int argc, char **argv)
                 if (gameState == STATE_LOBBY && event.key.keysym.sym == SDLK_SPACE)
                 {
                     gameState = STATE_PLAYING;
-                    Mix_HaltMusic(); // Stänger av musiken
+                    //Mix_HaltMusic(); // Stänger av musiken
                 }
             }
         }
@@ -152,14 +150,14 @@ int main(int argc, char **argv)
             if (ball.y <= 0 || ball.y >= WINDOW_HEIGHT - BALL_SIZE)
             {
                 ballVelY = -ballVelY;
-                Mix_PlayChannel(-1, soundEffect, 0);
+                //Mix_PlayChannel(-1, soundEffect, 0);
             }
 
             // Ball collision with paddles
             if (SDL_HasIntersection(&ball, &leftPaddle) || SDL_HasIntersection(&ball, &rightPaddle))
             {
                 ballVelX = -ballVelX;
-                Mix_PlayChannel(-1, soundEffect, 0);
+                //Mix_PlayChannel(-1, soundEffect, 0);
             }
 
             // Scoring and game end condition
@@ -242,8 +240,8 @@ int main(int argc, char **argv)
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    Mix_FreeMusic(music);
-    Mix_CloseAudio();
+    //Mix_FreeMusic(music);
+    //Mix_CloseAudio();
     TTF_Quit();
     SDL_Quit();
 
