@@ -1,16 +1,16 @@
 #ifndef paddle_data_h
 #define paddle_data_h
 
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 960
-#define MAX_PADDLES 2
+#define WINDOW_WIDTH 1300
+#define WINDOW_HEIGHT 800
+#define MAX_PADDLES 4
 
 #include <stdbool.h>
 
 enum gameState{START, ONGOING, GAME_OVER};
 typedef enum gameState GameState;
 
-enum clientCommand{READY, UP, DOWN};
+enum clientCommand{READY, UP, DOWN, LEFT, RIGHT, RESET_VELOCITY_X, RESET_VELOCITY_Y, RESTRICT_PLAYER};
 typedef enum clientCommand ClientCommand;
 
 typedef struct clientData{
@@ -24,14 +24,14 @@ typedef struct ballData{
 } BallData;
 
 typedef struct paddleData{
-    float velocityY;
-    int positionX, positionY;
+    float velocityY, velocityX;
+    int yPos, xPos;
 } PaddleData;
 
 typedef struct serverData{
     PaddleData paddles[MAX_PADDLES];
     BallData ball;
-    int clientNr;
+    int clientNr, teamScores[2];
     GameState gState;
     bool connected[MAX_PADDLES];
 } ServerData;

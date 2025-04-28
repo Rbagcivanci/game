@@ -1,23 +1,28 @@
-#ifndef paddle_h
-#define paddle_h
+#ifndef Paddle_h
+#define Paddle_h
 
 typedef struct paddle Paddle;
 typedef struct paddleData PaddleData;
 
-Paddle *createPaddle(SDL_Renderer *pRenderer, int window_width, int window_height, int paddleIndex);
-SDL_Rect getPaddleRect(Paddle *pPaddle);
-SDL_Texture *getPaddleTexture(Paddle *pPaddle);
-void updatePaddleVelocity(Paddle *pPaddle, float velocityY);
-void updatePaddleVelocityUp(Paddle *pPaddle);
-void updatePaddleVelocityDown(Paddle *pPaddle);
-int getPaddleSpeedY(Paddle *pPaddle);
+Paddle *createPaddle(SDL_Renderer *pGameRenderer, int w, int h, int paddleIndex);
 void setPaddlePosition(Paddle *pPaddle, int x, int y);
-void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h);
 void destroyPaddle(Paddle *pPaddle);
+void updatePaddleVelocity(Paddle *pPaddle, float vx, float vy);
+SDL_Texture *getPaddleTexture(Paddle *pPaddle);
+SDL_Rect getPaddleRect(Paddle *pPaddle);
+void updatePaddleVUp(Paddle *pPaddle);
+void updatePaddleVDown(Paddle *pPaddle);
+void updatePaddleVLeft(Paddle *pPaddle);
+void updatePaddleVRight(Paddle *pPaddle);
+void updatePaddlePosition(Paddle *pPaddle, float deltaTime);
+void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h);
+void resetPaddleSpeed(Paddle *pPaddle, int x, int y);
+int getPaddleSpeedY(Paddle *pPaddle);
+int getPaddleSpeedX(Paddle *pPaddle);
+void restrictPaddleWithinWindow(Paddle *pPaddle, int w, int h);
 void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2);
-void updatePaddlePos(Paddle *pPaddle, float t);
-void getPlayerSendData(Paddle *pPaddle, PaddleData *pData);
-void updatePlayerWithRecievedData(Paddle *pPaddle, PaddleData *pData);
-void restrictPlayerWithinWindow(Paddle *pPaddle, int w, int h);
+void getPaddleSendData(Paddle *pPaddle, PaddleData *pPaddleData);
+void updatePaddleWithRecievedData(Paddle *pPaddle, PaddleData *pPaddleData);
+void drawPaddle(Paddle *pPaddle);
 
-#endif // PADDLE_H 
+#endif // Paddle_h
