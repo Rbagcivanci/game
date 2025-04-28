@@ -15,7 +15,8 @@
 
 struct paddle {
     float velocityX, velocityY;
-    int xPos, yPos, team;
+    float xPos, yPos;
+    int team;
     Ball *pBall;
     SDL_Renderer *pRenderer;
     SDL_Texture *paddleTexture;
@@ -92,7 +93,7 @@ int getPaddleSpeedX(Paddle *pPaddle) {
 }
 
 void updatePaddlePosition(Paddle *pPaddle, float deltaTime) {
-    int newX = pPaddle->paddleRect.x + (int) (pPaddle->velocityX * deltaTime);
+    int newX = pPaddle->paddleRect.x + pPaddle->velocityX * deltaTime;
     int newY = pPaddle->paddleRect.y + pPaddle->velocityY * deltaTime;
     setPaddlePosition(pPaddle, newX, newY);
 }
@@ -124,16 +125,16 @@ void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h) {
 
 void restrictPaddleWithinWindow(Paddle *pPaddle, int width, int height) {
     if (pPaddle->paddleRect.x < WEST_PADDLE_BORDER) {
-        pPaddle->paddleRect.x = WEST_PADDLE_BORDER;
+        setPaddlePosition(pPaddle, WEST_PADDLE_BORDER, pPaddle->paddleRect.y);
     }
     if (pPaddle->paddleRect.x + pPaddle->paddleRect.w > width) {
-        pPaddle->paddleRect.x = width - pPaddle->paddleRect.w;
+        setPaddlePosition(pPaddle, width - pPaddle->paddleRect.w, pPaddle->paddleRect.y);
     }
     if (pPaddle->paddleRect.y < NORTH_PADDLE_BORDER) {
-        pPaddle->paddleRect.y = NORTH_PADDLE_BORDER;
+        setPaddlePosition(pPaddle, pPaddle->paddleRect.x, NORTH_PADDLE_BORDER);
     }
     if (pPaddle->paddleRect.y + pPaddle->paddleRect.h > height) {
-        pPaddle->paddleRect.y = height - pPaddle->paddleRect.h;
+        setPaddlePosition(pPaddle, pPaddle->paddleRect.x, height - pPaddle->paddleRect.h);
     }
 }
 

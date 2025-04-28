@@ -32,14 +32,12 @@ typedef struct game {
 
     char pIp[50];
 
-    int teamA;
-    int teamB;
+    int teamScores[1];
     int nrOfPaddles, paddleNr;
 
     UDPsocket pSocket;
     IPaddress serverAddress;
     UDPpacket *pPacket;
-
     Uint32 matchTime;
 }Game;
 
@@ -61,13 +59,14 @@ int main(int argc, char *argv[]) {
     if(!initiate(&g)){
         return 1;
     }
+    srand(500);
     run(&g);
     closeGame(&g);
     return 0;
 }
 
 int initiate(Game *pGame){
-    //printf("Initiating...\n");
+    //srand(time(NULL));
     if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)!= 0){
         printf("Error: %s\n",SDL_GetError());
         return 0;
@@ -117,14 +116,13 @@ int initiate(Game *pGame){
         printf("SDLNet_UDP_Open misslyckades: %s\n", SDLNet_GetError());
         return 0;
     }
-
-    if(SDLNet_ResolveHost(&(pGame->serverAddress), "127.0.0.1", 2000)) {
-        printf("SDLNet_ResolveHost(127.0.0.1 2000): %s\n", SDLNet_GetError());
-        return 0;
-    }
-
     if(!(pGame->pPacket = SDLNet_AllocPacket(512))){
         printf("SDLNet_AllocPacket: %s\n",SDLNet_GetError());
+        return 0;
+    }
+    //printf("UDP socket opened on port 0\n"); PASS
+    if(SDLNet_ResolveHost(&(pGame->serverAddress), "127.0.0.1", 2000)) {
+        printf("SDLNet_ResolveHost(%s 2000): %s\n",pGame->pIp, SDLNet_GetError());
         return 0;
     }
 
@@ -181,8 +179,8 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    pGame->teamA = 0;
-    pGame->teamB = 0;
+    pGame->teamScores[0] = 0;
+    pGame->teamScores[0] = 0;
     pGame->state = START;
     pGame->matchTime = 300000; // 5 minuter, millisekunder
 
@@ -196,7 +194,7 @@ void run(Game *pGame){
 
     Uint32 lastTick = SDL_GetTicks();
     Uint32 currentTick;
-    //currentTick = SDL_GetTicks();
+    currentTick = SDL_GetTicks();
     float deltaTime;
     SDL_TimerID timerId = 0;
     int joining = 0;
@@ -211,7 +209,7 @@ void run(Game *pGame){
                     timerId = SDL_AddTimer(1000, decreaseMatchTime, pGame);
                 }
 
-                currentTick = SDL_GetTicks();
+                //currentTick = SDL_GetTicks();
                 deltaTime = (currentTick - lastTick) / 1000.0f;
                 lastTick = currentTick;
                 while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
@@ -250,9 +248,9 @@ void run(Game *pGame){
                     }
 
                     if(goalScored(pGame->pBall)){
-                        pGame->teamA++;
+                        pGame->teamScores[0]++;
                     } else {
-                        pGame->teamB++;
+                        pGame->teamScores[1]++;
                     }
 
                     for(int i = 0; i < pGame->nrOfPaddles; i++){
@@ -320,7 +318,6 @@ void run(Game *pGame){
 
         }
     }
-    SDL_Delay(1000/120); // 60 FPS
     SDL_RemoveTimer(timerId);
 }
 
@@ -407,8 +404,8 @@ void renderGame(Game *pGame){
     char timeString[10], goalsTeamAString[10], goalsTeamBString[10];
 
     sprintf(timeString, "%02d:%02d", minutes, seconds);
-    snprintf(goalsTeamAString, sizeof(goalsTeamAString), "%d", pGame->teamA);
-    snprintf(goalsTeamBString, sizeof(goalsTeamBString), "%d", pGame->teamB);
+    snprintf(goalsTeamAString, sizeof(goalsTeamAString), "%d", pGame->teamScores[0]);
+    snprintf(goalsTeamBString, sizeof(goalsTeamBString), "%d", pGame->teamScores[1]);
 
     pGame->pMatchTimeText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, timeString, WINDOW_WIDTH - 200, 20);
     pGame->pGoalsTeamAText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, goalsTeamAString, WINDOW_WIDTH - 200, 50);
@@ -438,15 +435,14 @@ void renderGame(Game *pGame){
 void updateWithServerData(Game *pGame){
     ServerData serverData;
     memcpy(&serverData, pGame->pPacket->data, sizeof(ServerData));
-
     pGame->paddleNr = serverData.clientNr;
     pGame->state = serverData.gState;
 
     for(int i = 0; i < MAX_PADDLES; i++){
         if(i != pGame->paddleNr){
             updatePaddleWithRecievedData(pGame->pPaddle[i], &(serverData.paddles[i]));
+            pGame->connected[i] = serverData.connected[i];
         }
-        pGame->connected[i] = serverData.connected[i];
     }
     updateBallWithRecievedData(pGame->pBall, &(serverData.ball));
 }
@@ -510,12 +506,12 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
 }
 
 void handleGameOverText(Game *pGame){
-    if (pGame->teamA > pGame->teamB){
+    if (pGame->teamScores[0] > pGame->teamScores[1]){
         SDL_RenderClear(pGame->pRenderer);
         drawText(pGame->pTeamAText);
         drawText(pGame->pGameOverText);
         SDL_RenderPresent(pGame->pRenderer);
-    } else if (pGame->teamB > pGame->teamA){
+    } else if (pGame->teamScores[1] > pGame->teamScores[0]){
         SDL_RenderClear(pGame->pRenderer);
         drawText(pGame->pTeamBText);
         drawText(pGame->pGameOverText);
@@ -614,4 +610,3 @@ void closeGame(Game *pGame){
     TTF_Quit();
     SDL_Quit();
 }
-

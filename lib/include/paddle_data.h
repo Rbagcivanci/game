@@ -31,7 +31,7 @@ typedef struct paddleData{
 typedef struct serverData{
     PaddleData paddles[MAX_PADDLES];
     BallData ball;
-    int clientNr, teamScores[2];
+    int clientNr;
     GameState gState;
     bool connected[MAX_PADDLES];
 } ServerData;
