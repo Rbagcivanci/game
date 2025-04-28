@@ -12,7 +12,8 @@
 
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
-#define SPEED 5
+#define MOVEMENT_SPEED 300
+#define SPEED 20
 #define MIDDLE_FIELD 440
 #define BALL_SIZE 10
 
@@ -234,7 +235,8 @@ void run(Game *pGame){
                 }
                 break;
             case START:
-                drawText(pGame->pStartText);
+                renderLobby(pGame);
+
                 SDL_RenderPresent(pGame->pRenderer);
                 if(SDL_PollEvent(&event) && event.type==SDL_QUIT){
                     closeRequested = 1;
@@ -245,6 +247,7 @@ void run(Game *pGame){
                         setUpGame(pGame);
                     }
                 }
+                sendGameData(pGame);
                 break;
         }
     }
@@ -252,7 +255,7 @@ void run(Game *pGame){
     SDL_RemoveTimer(timerId);
 }
 
-/*void renderLobby(Game *pGame){
+void renderLobby(Game *pGame){
     SDL_RenderClear(pGame->pRenderer);
 
     char lobbyText[50], hostSpotText[50], spot1Text[50], spot2Text[50], spot3Text[50], spot4Text[50];
@@ -302,7 +305,7 @@ void run(Game *pGame){
     destroyText(pGame->pSpot3Text);
     destroyText(pGame->pSpot4Text);
     SDL_RenderPresent(pGame->pRenderer);
-}*/
+}
 
 /*void renderGame(Game *pGame){
     SDL_RenderClear(pGame->pRenderer);
@@ -392,6 +395,9 @@ void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, bool c
 }
 
 void executeCommand(Game *pGame, ClientData clientData){
+    if(clientData.clientNumber < 0 || clientData.clientNumber >= MAX_PADDLES){
+        return; // Invalid client number
+    }
     switch(clientData.command){
         case UP:
             updatePaddleVUp(pGame->pPaddle[clientData.clientNumber]);

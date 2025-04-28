@@ -11,7 +11,7 @@
 #define NORTH_PADDLE_BORDER 0
 #define SOUTH_PADDLE_BORDER 800
 
-#define MOVEMENT_SPEED 300
+#define MOVEMENT_SPEED 1
 
 struct paddle {
     float velocityX, velocityY;
@@ -64,19 +64,19 @@ SDL_Rect getPaddleRect(Paddle *pPaddle) {
 }
 
 void updatePaddleVUp(Paddle *pPaddle) {
-    pPaddle->velocityY = -MOVEMENT_SPEED;
+    pPaddle->paddleRect.y -=MOVEMENT_SPEED;
 }
 
 void updatePaddleVDown(Paddle *pPaddle) {
-    pPaddle->velocityY = MOVEMENT_SPEED;
+    pPaddle->paddleRect.y += MOVEMENT_SPEED;
 }
 
 void updatePaddleVLeft(Paddle *pPaddle) {
-    pPaddle->velocityX = -MOVEMENT_SPEED;
+    pPaddle->paddleRect.x -=MOVEMENT_SPEED;
 }
 
 void updatePaddleVRight(Paddle *pPaddle) {
-    pPaddle->velocityX = MOVEMENT_SPEED;
+    pPaddle->paddleRect.x += MOVEMENT_SPEED;
 }
 
 void resetPaddleSpeed(Paddle *pPaddle, int x, int y) {
@@ -93,23 +93,12 @@ int getPaddleSpeedX(Paddle *pPaddle) {
 }
 
 void updatePaddlePosition(Paddle *pPaddle, float deltaTime) {
-    if(deltaTime <= 0) {
-        return;
-    }
-    pPaddle->xPos += pPaddle->velocityX * deltaTime;
-    pPaddle->yPos += pPaddle->velocityY * deltaTime;
-
-    pPaddle->paddleRect.x = (int)pPaddle->xPos;
-    pPaddle->paddleRect.y = (int)pPaddle->yPos;
-
-    //float newX = pPaddle->paddleRect.x + (pPaddle->velocityX * deltaTime);
-    //float newY = pPaddle->paddleRect.y + (pPaddle->velocityY * deltaTime);
-    //setPaddlePosition(pPaddle, (int)newX, (int)newY);
+    int newX = pPaddle->paddleRect.x + pPaddle->velocityX * deltaTime;
+    int newY = pPaddle->paddleRect.y + pPaddle->velocityY * deltaTime;
+    setPaddlePosition(pPaddle, newX, newY);
 }
 
 void setPaddlePosition(Paddle *pPaddle, int x, int y) {
-    pPaddle->xPos = x;
-    pPaddle->yPos = y;
     pPaddle->paddleRect.x = x;
     pPaddle->paddleRect.y = y;
 }
@@ -135,14 +124,14 @@ void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h) {
 }
 
 void restrictPaddleWithinWindow(Paddle *pPaddle, int width, int height) {
-    if (pPaddle->paddleRect.x < 0) {
-        setPaddlePosition(pPaddle, 0, pPaddle->paddleRect.y);
+    if (pPaddle->paddleRect.x < WEST_PADDLE_BORDER) {
+        setPaddlePosition(pPaddle, WEST_PADDLE_BORDER, pPaddle->paddleRect.y);
     }
     if (pPaddle->paddleRect.x + pPaddle->paddleRect.w > width) {
         setPaddlePosition(pPaddle, width - pPaddle->paddleRect.w, pPaddle->paddleRect.y);
     }
-    if (pPaddle->paddleRect.y < 0) {
-        setPaddlePosition(pPaddle, pPaddle->paddleRect.x, 0);
+    if (pPaddle->paddleRect.y < NORTH_PADDLE_BORDER) {
+        setPaddlePosition(pPaddle, pPaddle->paddleRect.x, NORTH_PADDLE_BORDER);
     }
     if (pPaddle->paddleRect.y + pPaddle->paddleRect.h > height) {
         setPaddlePosition(pPaddle, pPaddle->paddleRect.x, height - pPaddle->paddleRect.h);

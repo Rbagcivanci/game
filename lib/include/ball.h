@@ -9,7 +9,7 @@ typedef struct ballData BallData;
 Ball *createBall(SDL_Renderer *renderer);
 SDL_Texture *getBallTexture(Ball *pBall);
 SDL_Rect getBallRect(Ball *pBall);
-void updateBallPosition(Ball *pBall, float deltaTime);
+void updateBallPosition(Ball *pBall);
 void destroyBall(Ball *pBall);
 void setBallVelocity(Ball *pBall, float velocityX, float velocityY);
 void setBallX(Ball *pBall, int x);
