@@ -33,7 +33,7 @@ Paddle *createPaddle(SDL_Renderer *pGameRenderer, int w, int h, int paddleIndex)
     pPaddle->paddleRect.h = 100;
     setStartingPosition(pPaddle, paddleIndex, w, h);
     
-    SDL_Surface *paddleSurface = IMG_Load("C:/Users/ahmed/game/lib/resources/ball2.png");
+    SDL_Surface *paddleSurface = IMG_Load("../lib/resources/ball2.png");
     if (!paddleSurface) {
         fprintf(stderr, "Failed to load Paddle image: %s\n", IMG_GetError());
         free(pPaddle);

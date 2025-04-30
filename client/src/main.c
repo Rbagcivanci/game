@@ -108,7 +108,7 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    pGame->pFont = TTF_OpenFont("C:/Users/ahmed/game/lib/resources/arial.ttf", 50);
+    pGame->pFont = TTF_OpenFont("../lib/resources/arial.ttf", 50);
     if(!pGame->pFont){
         printf("Error: %s\n",TTF_GetError());
         closeGame(pGame);
@@ -132,8 +132,8 @@ int initiate(Game *pGame){
     pGame->pPacket->address.host = pGame->serverAddress.host;
     pGame->pPacket->address.port = pGame->serverAddress.port;
 
-    pGame->pBackgroundSurface = IMG_Load("C:/Users/ahmed/game/lib/resources/bakgrundMain.png");
-    pGame->pIpSurface = IMG_Load("C:/Users/ahmed/game/lib/resources/bakgrundMain.png");
+    pGame->pBackgroundSurface = IMG_Load("../lib/resources/bakgrundMain.png");
+    pGame->pIpSurface = IMG_Load("../lib/resources/bakgrundMain.png");
     if(!pGame->pBackgroundSurface || !pGame->pIpSurface){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
