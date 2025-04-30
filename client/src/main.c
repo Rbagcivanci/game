@@ -14,17 +14,20 @@
 #include "ball.h"
 #include "text.h"
 
-#define MOVEMENT_SPEED 300
+#define MOVEMENT_SPEED 5
 
 typedef struct game {
     SDL_Window *pWindow;
     SDL_Renderer *pRenderer;
     SDL_Surface *pBackgroundSurface, *pIpSurface;
     SDL_Texture *backgroundTexture, *pIpTexture;
-    TTF_Font *pFont;
+    TTF_Font *pFont, *pScoreFont;
 
     Text *pLobbyText, *pEnterIpText, *pOutPutIpText, *pIpText, *pTeamAText, *pTeamBText, *pDrawText, *pGameOverText, *pMatchTimeText, *pGoalsTeamAText, *pGoalsTeamBText, *pHostSpotText, *pSpot1Text, *pSpot2Text, *pSpot3Text, *pSpot4Text;
+
     Paddle *pPaddle[MAX_PADDLES];
+    int nrOfPaddles, paddleNr;
+
     Ball *pBall;
     GameState state;
     ClientData clients[MAX_PADDLES];
@@ -35,8 +38,6 @@ typedef struct game {
     char pIp[50];
 
     int teamScores[2];
-    int teamA, teamB;
-    int nrOfPaddles, paddleNr;
 
     UDPsocket pSocket;
     IPaddress serverAddress;
@@ -46,30 +47,29 @@ typedef struct game {
 
 int initiate(Game *pGame);
 void run(Game *pGame);
-void renderGame(Game *pGame);
-void renderLobby(Game *pGame);
+void closeGame(Game *pGame);
 void handleInput(Game *pGame, SDL_Event *pEvent);
 void updateWithServerData(Game *pGame);
+
+void renderGame(Game *pGame);
+void renderLobby(Game *pGame);
+
 Uint32 decreaseMatchTime(Uint32 interval, void *param);
 void getInputIp(Game *pGame);
 
 void handleGameOverText(Game *pGame);
-void closeGame(Game *pGame);
 
 int main(int argc, char *argv[]) {
-    //printf("Starting Pong Client...\n");
     Game g = {0};
-    if(!initiate(&g)){
-        return 1;
-    }
-    srand(500);
+    if(!initiate(&g)) return 1;
     run(&g);
     closeGame(&g);
+
     return 0;
 }
 
 int initiate(Game *pGame){
-    //srand(time(NULL));
+    srand(time(NULL));
     if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)!= 0){
         printf("Error: %s\n",SDL_GetError());
         return 0;
@@ -88,13 +88,7 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    if(!(IMG_Init(IMG_INIT_PNG))){
-        printf("Error: %s\n",SDL_GetError());
-        closeGame(pGame);
-        return 0;
-    }
-    
-    pGame->pWindow = SDL_CreateWindow("Pong Client", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+    pGame->pWindow = SDL_CreateWindow("Pong Client", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     if(!pGame->pWindow){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
@@ -109,7 +103,8 @@ int initiate(Game *pGame){
     }
 
     pGame->pFont = TTF_OpenFont("../lib/resources/arial.ttf", 50);
-    if(!pGame->pFont){
+    pGame->pScoreFont = TTF_OpenFont("../lib/resources/arial.ttf", 30);
+    if(!pGame->pFont || !pGame->pScoreFont){
         printf("Error: %s\n",TTF_GetError());
         closeGame(pGame);
         return 0;
@@ -119,13 +114,14 @@ int initiate(Game *pGame){
         printf("SDLNet_UDP_Open misslyckades: %s\n", SDLNet_GetError());
         return 0;
     }
-    if(!(pGame->pPacket = SDLNet_AllocPacket(512))){
-        printf("SDLNet_AllocPacket: %s\n",SDLNet_GetError());
-        return 0;
-    }
-    //printf("UDP socket opened on port 0\n"); PASS
+
     if(SDLNet_ResolveHost(&(pGame->serverAddress), "127.0.0.1", 2000)) {
         printf("SDLNet_ResolveHost(%s 2000): %s\n",pGame->pIp, SDLNet_GetError());
+        return 0;
+    }
+
+    if(!(pGame->pPacket = SDLNet_AllocPacket(512))){
+        printf("SDLNet_AllocPacket: %s\n",SDLNet_GetError());
         return 0;
     }
 
@@ -141,8 +137,8 @@ int initiate(Game *pGame){
     }
 
     pGame->backgroundTexture = SDL_CreateTextureFromSurface(pGame->pRenderer, pGame->pBackgroundSurface);
-    pGame->pIpTexture = SDL_CreateTextureFromSurface(pGame->pRenderer, pGame->pIpSurface);
     SDL_FreeSurface(pGame->pBackgroundSurface);
+    pGame->pIpTexture = SDL_CreateTextureFromSurface(pGame->pRenderer, pGame->pIpSurface);
     SDL_FreeSurface(pGame->pIpSurface);
     if(!pGame->backgroundTexture || !pGame->pIpTexture){
         printf("Error: %s\n",SDL_GetError());
@@ -152,10 +148,6 @@ int initiate(Game *pGame){
 
     for (int i = 0; i < MAX_PADDLES; i++){
         pGame->pPaddle[i] = createPaddle( pGame->pRenderer, WINDOW_WIDTH, WINDOW_HEIGHT, i);
-        if(!pGame->pPaddle[i]){
-            fprintf(stderr , "Failed to create paddle %d\n", i+1);
-            return 0;
-        }
     }
 
     for(int i = 0; i < MAX_PADDLES; i++){
@@ -171,11 +163,19 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    pGame->pTeamAText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team A Won", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 50);
-    pGame->pTeamBText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team B Won", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 50);
-    pGame->pDrawText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Draw", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 50);
+    pGame->pTeamAText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team A Won", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 150);
+    pGame->pTeamBText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team B Won", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 150);
+    pGame->pDrawText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Draw", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 150);
     pGame->pGameOverText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game Over", WINDOW_WIDTH / 2 - 100, 
     WINDOW_HEIGHT / 2 - 50);
+
+    for(int i=0;i<MAX_PADDLES;i++){
+        if(!pGame->pPaddle[i]){
+            printf("Error: %s\n", SDL_GetError());
+            return 0;
+        }
+    }
+
     if(!pGame->pTeamAText || !pGame->pTeamBText || !pGame->pDrawText || !pGame->pGameOverText){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
@@ -185,7 +185,7 @@ int initiate(Game *pGame){
     pGame->teamScores[0] = 0;
     pGame->teamScores[1] = 0;
     pGame->state = START;
-    pGame->matchTime = 300000; // 5 minuter, millisekunder
+    //pGame->matchTime = 300000; // 5 minuter, millisekunder
 
     return 1;
 }
@@ -194,27 +194,26 @@ void run(Game *pGame){
     int closeRequested = 0;
     SDL_Event event;
     ClientData clientData;
-    Uint32 frameStart = SDL_GetTicks();
 
-    Uint32 lastTick = SDL_GetTicks();
-    Uint32 currentTick= SDL_GetTicks();
-    float deltaTime;
-    SDL_TimerID timerId = 0;
+    //Uint32 lastTick = SDL_GetTicks();
+    //Uint32 currentTick= SDL_GetTicks();
+    //float deltaTime;
+    //SDL_TimerID timerId = 0;
     int joining = 0;
-    pGame->hostConnected = 0;
+    //pGame->hostConnected = 0;
     strcpy(pGame->pIp, "Null");
 
     while(!closeRequested){
         switch(pGame->state){
             case ONGOING:
                 //printf("Ongoing\n");
-                if(timerId == 0){
+                /*if(timerId == 0){
                     timerId = SDL_AddTimer(1000, decreaseMatchTime, pGame);
                 }
                 
-                currentTick = SDL_GetTicks();
+                /*currentTick = SDL_GetTicks();
                 deltaTime = (currentTick - lastTick) / 1000.0f;
-                lastTick = currentTick;
+                lastTick = currentTick;*/
 
                 while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
                     updateWithServerData(pGame);
@@ -227,34 +226,16 @@ void run(Game *pGame){
                 }
 
                 for(int i = 0; i < MAX_PADDLES; i++){
-                    updatePaddlePosition(pGame->pPaddle[i], deltaTime);
-                    restrictPaddleWithinWindow(pGame->pPaddle[i], WINDOW_WIDTH, WINDOW_HEIGHT);
-                    handlePaddleBallCollision(getPaddleRect(pGame->pPaddle[i]), getBallRect(pGame->pBall), pGame->pBall);
+                    updatePaddlePosition(pGame->pPaddle[i]);
                 }
-                updateBallPosition(pGame->pBall, deltaTime);
-                restrictBallWithinWindow(pGame->pBall);
-                for (int i = 0; i < pGame->nrOfPaddles - 1; i++){
-                    for(int j = i + 1; j < pGame->nrOfPaddles; j++){
-                        handlePaddleCollision(pGame->pPaddle[i], pGame->pPaddle[j]);
-                    }
-                }
-
-                int goalTeam = goalScored(pGame->pBall);
-                if (goalTeam >= 0) {
-                    pGame->teamScores[goalTeam]++;
-                    for (int i = 0; i < pGame->nrOfPaddles; i++) {
-                        setStartingPosition(pGame->pPaddle[i], i, WINDOW_WIDTH, WINDOW_HEIGHT);
-                    }
-                    serveBall(pGame->pBall, (rand() % 2) * 2 - 1);
-                }
-                updateWithServerData(pGame); // Skicka uppdaterad poäng till klienter
-
+                updateBallPosition(pGame->pBall);
+                //updateWithServerData(pGame); // Skicka uppdaterad poäng till klienter
                 renderGame(pGame);
                 SDL_RenderPresent(pGame->pRenderer);
                 break;
             
             case GAME_OVER:
-                Uint32 gameOverTime = SDL_GetTicks();
+                //Uint32 gameOverTime = SDL_GetTicks();
                 handleGameOverText(pGame);
 
                 while(!closeRequested){
@@ -283,15 +264,15 @@ void run(Game *pGame){
                             closeGame(pGame);
                         }
 
-                        pGame->pPacket->address.host = pGame->serverAddress.host;
-                        pGame->pPacket->address.port = pGame->serverAddress.port;
+                        //pGame->pPacket->address.host = pGame->serverAddress.host;
+                        //pGame->pPacket->address.port = pGame->serverAddress.port;
 
                         if(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
-                            pGame->hostConnected = true;
+                            //pGame->hostConnected = true;
                             updateWithServerData(pGame);
                         }
                     }
-                    else if(!joining || pGame->hostConnected == 0){
+                    else if(!joining /*|| pGame->hostConnected == 0*/){
                         joining = 1;
                         clientData.command = READY;
                         clientData.clientNumber = -1;
@@ -314,7 +295,7 @@ void run(Game *pGame){
         SDL_Delay(1000/60); // 60 FPS
     }
     
-    SDL_RemoveTimer(timerId);
+    //SDL_RemoveTimer(timerId);
 }
 
 void renderLobby(Game *pGame){
@@ -438,8 +419,13 @@ void updateWithServerData(Game *pGame){
     for(int i = 0; i < MAX_PADDLES; i++)
     {
         updatePaddleWithRecievedData(pGame->pPaddle[i], &(serverData.paddles[i]));
+    }
+
+    for(int i = 0; i < pGame->nrOfPaddles; i++)
+    {
         pGame->connected[i] = serverData.connected[i];
     }
+    
     updateBallWithRecievedData(pGame->pBall, &(serverData.ball));
 }
 
@@ -447,40 +433,36 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
     ClientData clientData;
     clientData.clientNumber = pGame->paddleNr;
 
-    const Uint8 *state = SDL_GetKeyboardState(NULL);
-    bool sendUpdate = false;
-
-    // Hantera kontinuerlig input för velocity
-    if (state[SDL_SCANCODE_W] || state[SDL_SCANCODE_UP]) {
-        updatePaddleVUp(pGame->pPaddle[pGame->paddleNr]);
-        clientData.command = UP;
-        sendUpdate = true;
-    }
-    if (state[SDL_SCANCODE_S] || state[SDL_SCANCODE_DOWN]) {
-        updatePaddleVDown(pGame->pPaddle[pGame->paddleNr]);
-        clientData.command = DOWN;
-        sendUpdate = true;
-    }
-    if (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_LEFT]) {
-        updatePaddleVLeft(pGame->pPaddle[pGame->paddleNr]);
-        clientData.command = LEFT;
-        sendUpdate = true;
-    }
-    if (state[SDL_SCANCODE_D] || state[SDL_SCANCODE_RIGHT]) {
-        updatePaddleVRight(pGame->pPaddle[pGame->paddleNr]);
-        clientData.command = RIGHT;
-        sendUpdate = true;
-    }
-
-    // Skicka velocity-kommando till servern
-    if (sendUpdate) {
+    if(pEvent->type == SDL_KEYDOWN){
+        switch(pEvent->key.keysym.scancode){
+            case SDL_SCANCODE_W:
+            case SDL_SCANCODE_UP:
+                updatePaddleVUp(pGame->pPaddle[clientData.clientNumber]);
+                clientData.command = UP;
+                break;
+            case SDL_SCANCODE_A:
+            case SDL_SCANCODE_LEFT:
+                updatePaddleVLeft(pGame->pPaddle[clientData.clientNumber]);
+                clientData.command = LEFT;
+                break;
+            case SDL_SCANCODE_D:
+            case SDL_SCANCODE_RIGHT:
+                updatePaddleVRight(pGame->pPaddle[clientData.clientNumber]);
+                clientData.command = RIGHT;
+                break;
+            case SDL_SCANCODE_S:
+            case SDL_SCANCODE_DOWN:
+                updatePaddleVDown(pGame->pPaddle[clientData.clientNumber]);
+                clientData.command = DOWN;
+                break;
+        }
         memcpy(pGame->pPacket->data, &clientData, sizeof(ClientData));
-        pGame->pPacket->len = sizeof(ClientData);
-        SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
+		pGame->pPacket->len = sizeof(ClientData);
+        SDLNet_UDP_Send(pGame->pSocket, -1,pGame->pPacket);
     }
 
     // Hantera tangentuppsläpp för att nollställa velocity
-    if (pEvent->type == SDL_KEYUP) {
+    else if (pEvent->type == SDL_KEYUP) {
         bool sendReset = false;
         switch (pEvent->key.keysym.scancode) {
             case SDL_SCANCODE_W:
@@ -488,8 +470,8 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
             case SDL_SCANCODE_S:
             case SDL_SCANCODE_DOWN:
                 // Kontrollera att ingen Y-rörelse-tangent är nedtryckt
-                if (!state[SDL_SCANCODE_W] && !state[SDL_SCANCODE_UP] && !state[SDL_SCANCODE_S] && !state[SDL_SCANCODE_DOWN]) {
-                    resetPaddleSpeed(pGame->pPaddle[pGame->paddleNr], 0, 1);
+                if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_UP] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_DOWN]) {
+                    resetPaddleSpeed(pGame->pPaddle[clientData.clientNumber], 0, 1);
                     clientData.command = RESET_VELOCITY_Y;
                     sendReset = true;
                 }
@@ -499,8 +481,8 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
             case SDL_SCANCODE_D:
             case SDL_SCANCODE_RIGHT:
                 // Kontrollera att ingen X-rörelse-tangent är nedtryckt
-                if (!state[SDL_SCANCODE_A] && !state[SDL_SCANCODE_LEFT] && !state[SDL_SCANCODE_D] && !state[SDL_SCANCODE_RIGHT]) {
-                    resetPaddleSpeed(pGame->pPaddle[pGame->paddleNr], 1, 0);
+                if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LEFT] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_RIGHT]) {
+                    resetPaddleSpeed(pGame->pPaddle[clientData.clientNumber], 1, 0);
                     clientData.command = RESET_VELOCITY_X;
                     sendReset = true;
                 }

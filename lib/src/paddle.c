@@ -11,12 +11,10 @@
 #define NORTH_PADDLE_BORDER 0
 #define SOUTH_PADDLE_BORDER 800
 
-#define MOVEMENT_SPEED 300
+#define MOVEMENT_SPEED 5
 
 struct paddle {
-    float velocityX, velocityY;
-    float xPos, yPos;
-    int team;
+    float velocityX, velocityY, xPos, yPos;
     Ball *pBall;
     SDL_Renderer *pRenderer;
     SDL_Texture *paddleTexture;
@@ -25,10 +23,6 @@ struct paddle {
 
 Paddle *createPaddle(SDL_Renderer *pGameRenderer, int w, int h, int paddleIndex) {
     Paddle *pPaddle = malloc(sizeof(Paddle));
-    if (!pPaddle) {
-        fprintf(stderr, "Memory allocation failed for Paddle\n");
-        return NULL;
-    }
     pPaddle->paddleRect.w = 10;
     pPaddle->paddleRect.h = 100;
     setStartingPosition(pPaddle, paddleIndex, w, h);
@@ -49,6 +43,7 @@ Paddle *createPaddle(SDL_Renderer *pGameRenderer, int w, int h, int paddleIndex)
     }
     return pPaddle;
 }
+
 
 void updatePaddleVelocity(Paddle *pPaddle, float vx, float vy) {
     pPaddle->velocityX = vx;
@@ -92,15 +87,12 @@ int getPaddleSpeedX(Paddle *pPaddle) {
     return pPaddle->velocityX != 0;
 }
 
-void updatePaddlePosition(Paddle *pPaddle, float deltaTime) {
-    if(deltaTime <= 0) {
-        return;
-    }
-    pPaddle->xPos += pPaddle->velocityX * deltaTime;
-    pPaddle->yPos += pPaddle->velocityY * deltaTime;
+void updatePaddlePosition(Paddle *pPaddle) {
+    pPaddle->paddleRect.x += pPaddle->velocityX;
+    pPaddle->paddleRect.y += pPaddle->velocityY;
 
-    pPaddle->paddleRect.x = (int)pPaddle->xPos;
-    pPaddle->paddleRect.y = (int)pPaddle->yPos;
+    //pPaddle->paddleRect.x = (int)pPaddle->xPos;
+    //pPaddle->paddleRect.y = (int)pPaddle->yPos;
 
     //float newX = pPaddle->paddleRect.x + (pPaddle->velocityX * deltaTime);
     //float newY = pPaddle->paddleRect.y + (pPaddle->velocityY * deltaTime);
@@ -156,7 +148,6 @@ void getPaddleSendData(Paddle *pPaddle, PaddleData *pPaddleData){
     pPaddleData->velocityY = pPaddle->velocityY;
     pPaddleData->yPos = pPaddle->paddleRect.y;
     pPaddleData->xPos = pPaddle->paddleRect.x;
-    //sendBallData(pPaddle->pBall, &(pPaddleData->ball)); //Skicka bollen till servern
 }
 
 void updatePaddleWithRecievedData(Paddle *pPaddle, PaddleData *pPaddleData){
@@ -164,7 +155,6 @@ void updatePaddleWithRecievedData(Paddle *pPaddle, PaddleData *pPaddleData){
     pPaddle->velocityY = pPaddleData->velocityY;
     pPaddle->paddleRect.y = pPaddleData->yPos;
     pPaddle->paddleRect.x = pPaddleData->xPos;
-    //updateBallWithRecievedData(pPaddle->pBall, &(pPaddleData->ball)); //Uppdatera bollen med data från servern
 }
 
 void destroyPaddle(Paddle *pPaddle) {
@@ -213,11 +203,5 @@ void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2) {
                 setPaddlePosition(pPaddle2, rect2.x, rect2.y - shift);
             }
         }
-    }
-}
-
-void drawPaddle(Paddle *pPaddle) {
-    if (pPaddle != NULL && pPaddle->paddleTexture != NULL) {
-        SDL_RenderCopyEx(pPaddle->pRenderer, pPaddle->paddleTexture, NULL, &(pPaddle->paddleRect), 0, NULL, SDL_FLIP_NONE);
     }
 }

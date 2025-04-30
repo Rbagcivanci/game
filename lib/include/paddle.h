@@ -14,7 +14,7 @@ void updatePaddleVUp(Paddle *pPaddle);
 void updatePaddleVDown(Paddle *pPaddle);
 void updatePaddleVLeft(Paddle *pPaddle);
 void updatePaddleVRight(Paddle *pPaddle);
-void updatePaddlePosition(Paddle *pPaddle, float deltaTime);
+void updatePaddlePosition(Paddle *pPaddle);
 void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h);
 void resetPaddleSpeed(Paddle *pPaddle, int x, int y);
 int getPaddleSpeedY(Paddle *pPaddle);

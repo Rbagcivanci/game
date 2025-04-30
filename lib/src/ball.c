@@ -54,11 +54,9 @@ Ball *createBall(SDL_Renderer *renderer) {
     return pBall;
 }
 
-void updateBallPosition(Ball *pBall, float deltaTime) {
-    pBall->ballX += pBall->velocityX * deltaTime;
-    pBall->ballY += pBall->velocityY *deltaTime;
-    pBall->ballRect.x = (int)pBall->ballX;
-    pBall->ballRect.y = (int)pBall->ballY;
+void updateBallPosition(Ball *pBall) {
+    pBall->ballRect.x += pBall->velocityX;
+    pBall->ballRect.y += pBall->velocityY;
 }
 
 SDL_Texture *getBallTexture(Ball *pBall) {
