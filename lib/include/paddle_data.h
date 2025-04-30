@@ -20,7 +20,7 @@ typedef struct clientData{
 
 typedef struct ballData{
     float velocityY, velocityX;
-    int positionX, positionY;
+    float positionX, positionY;
 } BallData;
 
 typedef struct paddleData{
@@ -34,7 +34,8 @@ typedef struct serverData{
     int clientNr;
     GameState gState;
     bool connected[MAX_PADDLES];
-    int teamScores[1];
+    int teamScores[2];
+    bool hostConnected;
 } ServerData;
 
 #endif

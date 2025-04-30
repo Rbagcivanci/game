@@ -4,6 +4,7 @@
 #include <SDL_ttf.h>
 #include <SDL_net.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "paddle_data.h"
 #include "paddle.h"
@@ -33,6 +34,7 @@ typedef struct game {
     bool connected[MAX_PADDLES];
     int teamScores[2];
     int nrOfClients, nrOfPaddles;
+    bool goalJustScored;
 
     UDPsocket pSocket;
     UDPpacket *pPacket;
@@ -62,7 +64,7 @@ int main(int argc, char *argv[]) {
         //printf("Failed to initiate game\n");
         return 1;
     }
-    srand(500);
+    //srand(500);
     run(&g);
     closeGame(&g);
     return 0;
@@ -144,10 +146,9 @@ int initiate(Game *pGame){
 
     pGame->teamScores[0] = 0;
     pGame->teamScores[1] = 0;
-
     pGame->state = START;
     pGame->nrOfClients = 0;
-    //pGame->matchTime = 300000; // 5 minuter, millisekunder
+    pGame->matchTime = 300000; // 5 minuter, millisekunder
 
     return 1;
 }
@@ -156,6 +157,7 @@ void run(Game *pGame){
     int closeRequested = 0;
     SDL_Event event;
     ClientData clientData;
+    Uint32 frameStart = SDL_GetTicks();
 
     Uint32 lastTick = SDL_GetTicks();
     Uint32 currentTick;
@@ -185,44 +187,33 @@ void run(Game *pGame){
                         closeRequested = 1;
                     }
                 }
-
                 for(int i = 0; i<MAX_PADDLES; i++){
                     updatePaddlePosition(pGame->pPaddle[i], deltaTime);
                     restrictPaddleWithinWindow(pGame->pPaddle[i], WINDOW_WIDTH, WINDOW_HEIGHT);
+                    handlePaddleBallCollision(getPaddleRect(pGame->pPaddle[i]), getBallRect(pGame->pBall), pGame->pBall);
                 }
-                updateBallPosition(pGame->pBall);
-                for(int i=0; i<=1; i++){
-                    if(pGame->teamScores[i] > 5){
-                        pGame->state = GAME_OVER;
-                    }
-                }
+                updateBallPosition(pGame->pBall, deltaTime);
+                restrictBallWithinWindow(pGame->pBall);
+
                 for(int i = 0; i < pGame->nrOfPaddles - 1; i++){
                     for(int j = i + 1; j < pGame->nrOfPaddles; j++){
                         handlePaddleCollision(pGame->pPaddle[i], pGame->pPaddle[j]);
                     }
                 }
-                for(int i = 0; i < pGame->nrOfPaddles; i++){
-                    SDL_Rect paddleRect = getPaddleRect(pGame->pPaddle[i]);
-                    SDL_Rect ballRect = getBallRect(pGame->pBall);
-                    handlePaddleBallCollision(paddleRect, ballRect, pGame->pBall);
-                }
-
-                if(!checkGoal(pGame->pBall)){
-                    restrictBallWithinWindow(pGame->pBall);
-                } else {
-                    for(int i = 0; i < pGame->nrOfPaddles; i++){
+                int goalTeam = goalScored(pGame->pBall);
+                if (goalTeam >= 0) {
+                    pGame->teamScores[goalTeam]++;
+                    for (int i = 0; i < pGame->nrOfPaddles; i++) {
                         setStartingPosition(pGame->pPaddle[i], i, WINDOW_WIDTH, WINDOW_HEIGHT);
                     }
-
-                    if(!goalScored(pGame->pBall)){
-                        pGame->teamScores[0]++;
-                    } else {
-                        pGame->teamScores[1]++;
+                    serveBall(pGame->pBall, (rand() % 2) * 2 - 1);
+                }
+                sendGameData(pGame); // Skicka uppdaterad poäng till klienter
+                for (int i = 0; i <= 1; i++) {
+                    if (pGame->teamScores[i] >= 5) {
+                        pGame->state = GAME_OVER;
                     }
                 }
-                /*for (int i = 0; i < MAX_PADDLES; i++){
-                    drawPaddle(pGame->pPaddle[i]);
-                }*/
                 SDL_RenderPresent(pGame->pRenderer);
                 //renderGame(pGame);
                 break;
@@ -237,21 +228,29 @@ void run(Game *pGame){
             case START:
                 renderLobby(pGame);
 
-                SDL_RenderPresent(pGame->pRenderer);
+                while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)==1){
+                    ClientData clientData;
+                    memcpy(&clientData, pGame->pPacket->data, sizeof(ClientData));
+                    if(clientData.command == READY){
+                        addClient(pGame->pPacket->address, pGame->clients, &(pGame->nrOfClients), pGame->connected);
+                        sendGameData(pGame); // Skicka uppdatering till alla klienter
+                    }
+                }
+
                 if(SDL_PollEvent(&event) && event.type==SDL_QUIT){
                     closeRequested = 1;
                 }
-                if(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)==1){
-                    addClient(pGame->pPacket->address, pGame->clients, &(pGame->nrOfClients), pGame->connected);
-                    if(pGame->nrOfClients == MAX_PADDLES){
-                        setUpGame(pGame);
-                    }
+
+                if(pGame->nrOfClients == MAX_PADDLES){
+                    setUpGame(pGame);
+                } else {
+                    sendGameData(pGame); // Skicka regelbundna uppdateringar till anslutna klienter
                 }
-                sendGameData(pGame);
+                SDL_RenderPresent(pGame->pRenderer);
                 break;
         }
+        SDL_Delay(1000/60);
     }
-    SDL_Delay(1000/60); // 60 FPS
     SDL_RemoveTimer(timerId);
 }
 
@@ -351,35 +350,40 @@ void renderLobby(Game *pGame){
 }*/
 
 void setUpGame(Game *pGame){
+    int value = (rand() % 2) * 2 - 1;
     for(int i = 0; i < pGame->nrOfPaddles; i++){
         setStartingPosition(pGame->pPaddle[i], i, WINDOW_WIDTH, WINDOW_HEIGHT);
     }
     setBallX(pGame->pBall, WINDOW_WIDTH/2 - BALL_SIZE/2);
     setBallY(pGame->pBall, WINDOW_HEIGHT/2 - BALL_SIZE/2);
-    float initialVelocityX = ((rand() % 2 == 0) ? -1 : 1) * SPEED;
-    float initialVelocityY = ((rand() % 2 == 0) ? -1 : 1) * SPEED;
+    float initialVelocityX = SPEED;
+    float initialVelocityY = SPEED;
+    setBallVelocity(pGame->pBall, initialVelocityX, initialVelocityY);
+    serveBall(pGame->pBall, value);
     pGame->nrOfPaddles = MAX_PADDLES;
     pGame->state = ONGOING;
 }
 
 void sendGameData(Game *pGame){
     pGame->serverData.gState = pGame->state;
+    pGame->serverData.teamScores[0] = pGame->teamScores[0];
+    pGame->serverData.teamScores[1] = pGame->teamScores[1];
+    pGame->serverData.hostConnected = true; // Servern är host
 
     for(int i = 0; i < MAX_PADDLES; i++){
         getPaddleSendData(pGame->pPaddle[i], &(pGame->serverData.paddles[i]));
-    }
-    for(int i = 0; i < pGame->nrOfPaddles; i++){
         pGame->serverData.connected[i] = pGame->connected[i];
     }
-
     sendBallData(pGame->pBall, &(pGame->serverData.ball));
     
-    for (int i = 0; i < MAX_PADDLES; i++){
-        pGame->serverData.clientNr = i;
+    for (int i = 0; i < pGame->nrOfClients; i++){
+        if(pGame->connected[i]){
+            pGame->serverData.clientNr = i;
         memcpy(pGame->pPacket->data, &(pGame->serverData), sizeof(ServerData));
         pGame->pPacket->len = sizeof(ServerData);
         pGame->pPacket->address = pGame->clients[i];
         SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
+        }
     }
 }
 

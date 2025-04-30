@@ -118,20 +118,22 @@ void setStartingPosition(Paddle *pPaddle, int paddleIndex, int w, int h) {
     pPaddle->velocityX = 0;
     pPaddle->velocityY = 0;
     switch(paddleIndex) {
-        case 0: pPaddle->paddleRect.x = 50;
-                pPaddle->paddleRect.y = 50;
+        case 0: pPaddle->paddleRect.x = 100;
+                pPaddle->paddleRect.y = 100;
         break;
-        case 1: pPaddle->paddleRect.x = w - pPaddle->paddleRect.w - 50;
-                pPaddle->paddleRect.y = 50;
+        case 1: pPaddle->paddleRect.x = w - pPaddle->paddleRect.w - 100;
+                pPaddle->paddleRect.y = 100;
         break;
-        case 2: pPaddle->paddleRect.x = 50;
-                pPaddle->paddleRect.y = h - pPaddle->paddleRect.h - 50;
+        case 2: pPaddle->paddleRect.x = 100;
+                pPaddle->paddleRect.y = h - pPaddle->paddleRect.h - 100;
         break;
-        case 3: pPaddle->paddleRect.x = w - pPaddle->paddleRect.w - 50;
-                pPaddle->paddleRect.y = h - pPaddle->paddleRect.h - 50;
+        case 3: pPaddle->paddleRect.x = w - pPaddle->paddleRect.w - 100;
+                pPaddle->paddleRect.y = h - pPaddle->paddleRect.h - 100;
         break;
-        
     }
+
+    pPaddle->xPos = pPaddle->paddleRect.x;
+    pPaddle->yPos = pPaddle->paddleRect.y;
 }
 
 void restrictPaddleWithinWindow(Paddle *pPaddle, int width, int height) {
