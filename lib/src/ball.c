@@ -21,33 +21,33 @@ struct ball {
 };
 
 Ball *createBall(SDL_Renderer *renderer) {
-    Ball *pBall = malloc(sizeof(Ball)); //Allokera minne till boll
+    Ball *pBall = malloc(sizeof(Ball));
     if (!pBall){
         fprintf(stderr, "Failed to allocate memory for pBall.\n");
         return NULL;
     }
 
-    pBall->ballSurface = IMG_Load("../lib/resources/ballPong.png"); // Surface med bild
-    if (!pBall->ballSurface) { //Om bild inte lyckas skapas --> felmeddelande, släpp minne och returnera NULL
+    pBall->ballSurface = IMG_Load("../lib/resources/ballPong.png");
+    if (!pBall->ballSurface) {
         fprintf(stderr, "Error loading pBall texture: %s\n", SDL_GetError());
         free(pBall);
         return NULL;
     }
 
-    pBall->ballTexture = SDL_CreateTextureFromSurface(renderer, pBall->ballSurface); //Skapa textur från ytan
-    SDL_FreeSurface(pBall->ballSurface); //Släpp ytan efter att texturen skapats
-    if (!pBall->ballTexture) { //Om texturen inte lyckas skapas --> felmeddelande, släpp minne och returnera NULL
+    pBall->ballTexture = SDL_CreateTextureFromSurface(renderer, pBall->ballSurface);
+    SDL_FreeSurface(pBall->ballSurface);
+    if (!pBall->ballTexture) {
         fprintf(stderr, "Error creating pBall texture: %s\n", SDL_GetError());
         free(pBall);
         return NULL;
     }
 
-    pBall->ballRect.w = BALL_SIZE; //Sätt storlek på rektangeln
+    pBall->ballRect.w = BALL_SIZE;
     pBall->ballRect.h = BALL_SIZE;
-    pBall->ballRect.x = WINDOW_WIDTH / 2 - pBall->ballRect.w / 2; //Sätt position på rektangeln
+    pBall->ballRect.x = WINDOW_WIDTH / 2 - pBall->ballRect.w / 2;
     pBall->ballRect.y = MIDDLE_FIELD - pBall->ballRect.h / 2;
     pBall->velocityY = SPEED; 
-    pBall->velocityX = SPEED; //Sätt hastighet på bollen
+    pBall->velocityX = SPEED;
     pBall->ballX = WINDOW_WIDTH / 2 - BALL_SIZE / 2;
     pBall->ballY = WINDOW_HEIGHT / 2 - BALL_SIZE / 2;
 
@@ -68,58 +68,45 @@ SDL_Rect getBallRect(Ball *pBall) {
 }
 
 void setBallVelocity(Ball *pBall, float velocityX, float velocityY) {
-    pBall->velocityX = velocityX; //Sätt hastighet på bollen
+    pBall->velocityX = velocityX;
     pBall->velocityY = velocityY;
 }
 
 void setBallX(Ball *pBall, int x) {
-    pBall->ballRect.x = x; //Sätt position på bollen
+    pBall->ballRect.x = x;
 }
 
 void setBallY(Ball *pBall, int y) {
-    pBall->ballRect.y = y; //Sätt position på bollen
+    pBall->ballRect.y = y;
 }
 
 void destroyBall(Ball *pBall){
-    SDL_DestroyTexture(pBall->ballTexture); //Släpp texturen
-    free(pBall); //Släpp minnet
+    SDL_DestroyTexture(pBall->ballTexture);
+    free(pBall);
 }
 
 int checkCollision(SDL_Rect rect1, SDL_Rect rect2){
-    return SDL_HasIntersection(&rect1, &rect2); //Kolla om boll kolliderar med annat
+    return SDL_HasIntersection(&rect1, &rect2); 
 }
 
 int goalScored(Ball *pBall) {
     SDL_Rect ballRect = getBallRect(pBall);
-
-    if (ballRect.x < 0) {
-        //printf("Goal on left side! (Team B scores)\n");
-        //setBallX(pBall, WINDOW_WIDTH / 2 - BALL_SIZE / 2);
-        //setBallY(pBall, WINDOW_HEIGHT / 2 - BALL_SIZE / 2);
-        //serveBall(pBall, -1); // Serve mot vänster
-        return 1; // Team B
-    }
-    if (ballRect.x > WINDOW_WIDTH - BALL_SIZE) {
-        //printf("Goal on right side! (Team A scores)\n");
-        //setBallX(pBall, WINDOW_WIDTH / 2 - BALL_SIZE / 2);
-        //setBallY(pBall, WINDOW_HEIGHT / 2 - BALL_SIZE / 2);
-        //serveBall(pBall, 1); // Serve mot höger
-        return 0; // Team A
-    }
-    return -1; // Inget mål
+    if (ballRect.x < 0) return 1; // Team B
+    if (ballRect.x > WINDOW_WIDTH - BALL_SIZE) return 0;
+    return -1;
 }
 
 void updateBallWithRecievedData(Ball *pBall, BallData *pBallData){
-    pBall->velocityX = pBallData->velocityX; //Uppdatera hastighet på bollen
+    pBall->velocityX = pBallData->velocityX;
     pBall->velocityY = pBallData->velocityY;
-    pBall->ballRect.x = pBallData->positionX; //Uppdatera position på bollen
+    pBall->ballRect.x = pBallData->positionX;
     pBall->ballRect.y = pBallData->positionY;
 }
 
 void sendBallData(Ball *pBall, BallData *pBallData){
-    pBallData->velocityX = pBall->velocityX; //Skicka hastighet på bollen
+    pBallData->velocityX = pBall->velocityX;
     pBallData->velocityY = pBall->velocityY;
-    pBallData->positionX = pBall->ballRect.x; //Skicka position på bollen
+    pBallData->positionX = pBall->ballRect.x;
     pBallData->positionY = pBall->ballRect.y;
 }
 
@@ -134,28 +121,23 @@ void restrictBallWithinWindow(Ball *pBall) {
         setBallY(pBall, WINDOW_HEIGHT - BALL_SIZE);
         setBallVelocity(pBall, pBall->velocityX, -pBall->velocityY);
     }
-    // Hantera sidoväggar separat för att undvika målkonflikt
     if (ballRect.x < 0 || ballRect.x + BALL_SIZE > WINDOW_WIDTH) {
-        // Målhantering sker i goalScored, så här gör vi inget
     }
 }
 
 void handlePaddleBallCollision(SDL_Rect paddleRect, SDL_Rect ballRect, Ball *pBall) {
     if (checkCollision(paddleRect, ballRect)) {
-        // Beräkna träffpunktens relativa position på paddeln (-1 till 1)
         float relativeIntersectY = (paddleRect.y + paddleRect.h / 2.0f) - (ballRect.y + ballRect.h / 2.0f);
         float normalizedRelativeIntersectY = relativeIntersectY / (paddleRect.h / 2.0f);
-        // Justera bollens Y-hastighet baserat på träffpunkten
-        float bounceAngle = normalizedRelativeIntersectY * (45.0f * (M_PI / 180.0f)); // Max 45 graders vinkel
+        float bounceAngle = normalizedRelativeIntersectY * (45.0f * (M_PI / 180.0f));
         float ballSpeed = sqrt(pBall->velocityX * pBall->velocityX + pBall->velocityY * pBall->velocityY);
-        ballSpeed = ballSpeed < SPEED ? SPEED : ballSpeed * 1.1; // Öka hastighet något vid träff
+        ballSpeed = ballSpeed < SPEED ? SPEED : ballSpeed * 1.1;
         pBall->velocityX = (paddleRect.x < WINDOW_WIDTH / 2 ? 1 : -1) * ballSpeed * cos(bounceAngle);
         pBall->velocityY = -ballSpeed * sin(bounceAngle);
 
-        // Justera position för att undvika fastnande
-        if (paddleRect.x < WINDOW_WIDTH / 2) { // Vänster paddel
+        if (paddleRect.x < WINDOW_WIDTH / 2) {
             setBallX(pBall, paddleRect.x + paddleRect.w + 1);
-        } else { // Höger paddel
+        } else {
             setBallX(pBall, paddleRect.x - ballRect.w - 1);
         }
     }
@@ -163,7 +145,7 @@ void handlePaddleBallCollision(SDL_Rect paddleRect, SDL_Rect ballRect, Ball *pBa
 void serveBall(Ball *pBall, int direction){
     setBallX(pBall, WINDOW_WIDTH / 2 - BALL_SIZE / 2);
     setBallY(pBall, WINDOW_HEIGHT / 2 - BALL_SIZE / 2);
-    float velocityX = direction * SPEED; // direction: 1 för höger, -1 för vänster
+    float velocityX = direction * SPEED;
     float velocityY = direction * SPEED;
     setBallVelocity(pBall, velocityX, velocityY);
 }
