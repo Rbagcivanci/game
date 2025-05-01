@@ -90,13 +90,6 @@ int getPaddleSpeedX(Paddle *pPaddle) {
 void updatePaddlePosition(Paddle *pPaddle) {
     pPaddle->paddleRect.x += pPaddle->velocityX;
     pPaddle->paddleRect.y += pPaddle->velocityY;
-
-    //pPaddle->paddleRect.x = (int)pPaddle->xPos;
-    //pPaddle->paddleRect.y = (int)pPaddle->yPos;
-
-    //float newX = pPaddle->paddleRect.x + (pPaddle->velocityX * deltaTime);
-    //float newY = pPaddle->paddleRect.y + (pPaddle->velocityY * deltaTime);
-    //setPaddlePosition(pPaddle, (int)newX, (int)newY);
 }
 
 void setPaddlePosition(Paddle *pPaddle, int x, int y) {
@@ -172,20 +165,15 @@ void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2) {
     SDL_Rect rect2 = getPaddleRect(pPaddle2);
     
     if (checkCollision(rect1, rect2)) {
-        // Calculate overlap in both dimensions
         int overlapX;
         if(rect1.x<rect2.x) overlapX = (rect1.x + rect1.w - rect2.x);
         else overlapX = (rect2.x + rect2.w - rect1.x);
 
         int overlapY;
-        if(rect1.y<rect2.y) 
-            overlapY = (rect1.y + rect1.h - rect2.y);
-        else 
-            overlapY = (rect2.y + rect2.h - rect1.y);
-
-        // Resolve collision based on the lesser overlap
+        if(rect1.y<rect2.y)  overlapY = (rect1.y + rect1.h - rect2.y);
+        else  overlapY = (rect2.y + rect2.h - rect1.y);
         if (overlapX < overlapY) {
-            int shift = overlapX / 2 + 1;  // Added +1 for anti-sticking
+            int shift = overlapX / 2 + 1; 
             if (rect1.x < rect2.x) {
                 setPaddlePosition(pPaddle1, rect1.x - shift, rect1.y);
                 setPaddlePosition(pPaddle2, rect2.x + shift, rect2.y);
@@ -194,7 +182,7 @@ void handlePaddleCollision(Paddle *pPaddle1, Paddle *pPaddle2) {
                 setPaddlePosition(pPaddle2, rect2.x - shift, rect2.y);
             }
         } else {
-            int shift = overlapY / 2 + 1;  // Added +1 for anti-sticking
+            int shift = overlapY / 2 + 1;
             if (rect1.y < rect2.y) {
                 setPaddlePosition(pPaddle1, rect1.x, rect1.y - shift);
                 setPaddlePosition(pPaddle2, rect2.x, rect2.y + shift);
