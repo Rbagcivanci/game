@@ -5,12 +5,10 @@
 #include <SDL_net.h>
 #include <time.h>
 #include <stdlib.h>
-
 #include "paddle_data.h"
 #include "paddle.h"
 #include "text.h"
 #include "ball.h"
-
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
 #define MOVEMENT_SPEED 300
@@ -24,19 +22,15 @@ typedef struct game {
     SDL_Surface *pBackgroundSurface;
     SDL_Texture *backgroundTexture;
     TTF_Font *pFont;
-
-    Text *pLobbyText, *pOverText, *pMatchTimeText, *pStartText, *pHostSpotText, *pSpot1Text, *pSpot2Text, *pSpot3Text, *pSpot4Text, *pIpText, *pTeamAText, *pTeamBText, *pGoalsTeamAText, *pGoalsTeamBText, *pEnterIpText, *pOutPutIpText;
+    Text *pOverText, *pMatchTimeText, *pStartText, *pOngoingText;
     Paddle *pPaddle[MAX_PADDLES];
     Ball *pBall;
     GameState state;
     ServerData serverData;
-
     bool connected[MAX_PADDLES];
     int teamScores[2];
     int nrOfClients, nrOfPaddles;
-    bool goalJustScored;
     bool hostConnected;
-
     UDPsocket pSocket;
     UDPpacket *pPacket;
     Uint32 matchTime;
@@ -48,13 +42,9 @@ void run(Game *pGame);
 void renderGame(Game *pGame);
 void renderLobby(Game *pGame);
 void handleInput(Game *pGame, SDL_Event *pEvent);
-
 void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, bool connected[]);
 void sendGameData(Game *pGame);
 void executeCommand(Game *pGame, ClientData clientData);
-
-Uint32 decreaseMatchTime(Uint32 interval, void *param);
-
 void setUpGame(Game *pGame);
 void closeGame(Game *pGame);
 
@@ -98,7 +88,7 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    pGame->pFont = TTF_OpenFont("../lib/resources/arial.ttf", 24);
+    pGame->pFont = TTF_OpenFont("../lib/resources/Symtext.ttf", 24);
     if(!pGame->pFont){
         printf("Error: %s\n",SDL_GetError());
         return 0;
@@ -109,13 +99,13 @@ int initiate(Game *pGame){
         closeGame(pGame);
         return 0;
     }
-    //printf("UDP socket opened on port 2000\n"); PASS
+
     if(!(pGame->pPacket = SDLNet_AllocPacket(512))){
         printf("SDLNet_AllocPacket: %s\n",SDLNet_GetError());
         closeGame(pGame);
         return 0;
     }
-    //printf("UDP packet allocated\n"); PASS
+
     for (int i = 0; i < MAX_PADDLES; i++){
         pGame->pPaddle[i] = createPaddle(pGame->pRenderer, WINDOW_WIDTH, WINDOW_HEIGHT, i);
     }
@@ -129,14 +119,15 @@ int initiate(Game *pGame){
 
     pGame->nrOfPaddles = MAX_PADDLES;
     pGame->pBall = createBall(pGame->pRenderer);
-    pGame->pOverText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game Over", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 50);
-    pGame->pStartText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Waiting for clients", WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 100);
+    pGame->pOngoingText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game has begun", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
+    pGame->pOverText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game Over", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
+    pGame->pStartText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Waiting for clients...", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
     if(!pGame->pBall){
         printf("Failed to create ball\n");
         closeGame(pGame);
         return 0;
     }
-    if(!pGame->pOverText || !pGame->pStartText){
+    if(!pGame->pOverText || !pGame->pStartText || !pGame->pOngoingText){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
         return 0;
@@ -146,7 +137,6 @@ int initiate(Game *pGame){
     pGame->teamScores[1] = 0;
     pGame->state = START;
     pGame->nrOfClients = 0;
-    //pGame->matchTime = 300000; // 5 minuter, millisekunder
 
     return 1;
 }
@@ -155,26 +145,13 @@ void run(Game *pGame){
     int closeRequested = 0;
     SDL_Event event;
     ClientData clientData;
-    //Uint32 frameStart = SDL_GetTicks();
-
-    //Uint32 lastTick = SDL_GetTicks();
-    //Uint32 currentTick;
-    //float deltaTime;
-
-    //SDL_TimerID timerId = 0;
 
     while(!closeRequested){
         switch(pGame->state){
             case ONGOING:
+                SDL_RenderClear(pGame->pRenderer);
+                drawText(pGame->pOngoingText);
                 sendGameData(pGame);
-                /*if(timerId == 0){
-                    timerId = SDL_AddTimer(1000, decreaseMatchTime, &(pGame->matchTime));
-                }
-
-                currentTick = SDL_GetTicks();
-                deltaTime = (currentTick - lastTick) / 1000.0f;
-                lastTick = currentTick;*/
-
                 while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)==1){
                     memcpy(&clientData, pGame->pPacket->data, sizeof(ClientData));
                     executeCommand(pGame, clientData);
@@ -208,7 +185,7 @@ void run(Game *pGame){
                     serveBall(pGame->pBall, (rand() % 2) * 2 - 1);
                 }
                 sendGameData(pGame); // Skicka uppdaterad poäng till klienter
-                for (int i = 0; i <= 1; i++) {
+                for (int i = 0; i <= 2; i++) {
                     if (pGame->teamScores[i] >= 5) {
                         pGame->state = GAME_OVER;
                     }
@@ -217,15 +194,18 @@ void run(Game *pGame){
                 break;
             
             case GAME_OVER:
+                SDL_RenderClear(pGame->pRenderer);
                 drawText(pGame->pOverText);
+                SDL_RenderPresent(pGame->pRenderer);
                 sendGameData(pGame);
                 if(pGame->nrOfClients == MAX_PADDLES){
                     pGame->nrOfClients = 0;
                 }
                 break;
             case START:
+                SDL_RenderClear(pGame->pRenderer);
+                drawText(pGame->pStartText);
                 SDL_RenderPresent(pGame->pRenderer);
-
                 if(SDL_PollEvent(&event) && event.type == SDL_QUIT) closeRequested=1;
                 if(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)==1){
                     addClient(pGame->pPacket->address, pGame->clients, &(pGame->nrOfClients), pGame->connected);
@@ -316,32 +296,20 @@ void executeCommand(Game *pGame, ClientData clientData){
     }
 }
 
-Uint32 decreaseMatchTime(Uint32 interval, void *param){
-    Uint32 *pMatchTime = (Uint32 *)param;
-    if(*pMatchTime > 0){
-        *pMatchTime -= 1000; // i millisekunder
-    }
-    return interval; // Continue the timer
-}
-
 void closeGame(Game *pGame){
     for(int i = 0; i < MAX_PADDLES; i++){
         if(pGame->pPaddle[i]){
             destroyPaddle(pGame->pPaddle[i]);
         }
     }
+    if(pGame->pBall) destroyBall(pGame->pBall);
     if(pGame->pRenderer) SDL_DestroyRenderer(pGame->pRenderer);
     if(pGame->pWindow) SDL_DestroyWindow(pGame->pWindow);
-    if(pGame->pBall) destroyBall(pGame->pBall);
-    if(pGame->pLobbyText) destroyText(pGame->pLobbyText);
-    if(pGame->pSpot1Text) destroyText(pGame->pSpot1Text);
-    if(pGame->pSpot2Text) destroyText(pGame->pSpot2Text);
-    if(pGame->pSpot3Text) destroyText(pGame->pSpot3Text);
-    if(pGame->pSpot4Text) destroyText(pGame->pSpot4Text);
-    if(pGame->pHostSpotText) destroyText(pGame->pHostSpotText);
+    if(pGame->pOverText) destroyText(pGame->pOverText);
+    if(pGame->pStartText) destroyText(pGame->pStartText);
+    if(pGame->pOngoingText) destroyText(pGame->pOngoingText);
     if(pGame->pMatchTimeText) destroyText(pGame->pMatchTimeText);
     if(pGame->pFont) TTF_CloseFont(pGame->pFont);
-
     if(pGame->pPacket) SDLNet_FreePacket(pGame->pPacket);
     if(pGame->pSocket) SDLNet_UDP_Close(pGame->pSocket);
 

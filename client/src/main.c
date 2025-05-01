@@ -1,19 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
 #include <SDL.h>
 #include <SDL_main.h>
 #include <SDL_timer.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <SDL_net.h>
-
 #include "paddle_data.h"
 #include "paddle.h"
 #include "ball.h"
 #include "text.h"
-
 #define MOVEMENT_SPEED 5
 
 typedef struct game {
@@ -22,27 +19,19 @@ typedef struct game {
     SDL_Surface *pBackgroundSurface, *pIpSurface, *pLobbySurface, *pGameOverSurface;
     SDL_Texture *backgroundTexture, *pIpTexture, *pLobbyTexture, *pGameOverTexture;
     TTF_Font *pFont, *pScoreFont, *pGameOverFont;
-
-    Text *pLobbyText, *pEnterIpText, *pOutPutIpText, *pIpText, *pTeamAText, *pTeamBText, *pDrawText, *pGameOverText, *pMatchTimeText, *pGoalsTeamAText, *pGoalsTeamBText, *pHostSpotText, *pSpot1Text, *pSpot2Text, *pSpot3Text, *pSpot4Text;
-
+    Text *pLobbyText, *pEnterIpText, *pOutPutIpText, *pIpText, *pTeamAText, *pTeamBText, *pDrawText, *pGameOverText, *pGoalsTeamAText, *pGoalsTeamBText, *pHostSpotText, *pSpot1Text, *pSpot2Text, *pSpot3Text, *pSpot4Text;
     Paddle *pPaddle[MAX_PADDLES];
     int nrOfPaddles, paddleNr;
-
     Ball *pBall;
     GameState state;
     ClientData clients[MAX_PADDLES];
-
     bool connected[MAX_PADDLES];
     bool hostConnected;
-
     char pIp[50];
-
     int teamScores[2];
-
     UDPsocket pSocket;
     IPaddress serverAddress;
     UDPpacket *pPacket;
-    Uint32 matchTime;
 }Game;
 
 int initiate(Game *pGame);
@@ -50,13 +39,9 @@ void run(Game *pGame);
 void closeGame(Game *pGame);
 void handleInput(Game *pGame, SDL_Event *pEvent);
 void updateWithServerData(Game *pGame);
-
 void renderGame(Game *pGame);
 void renderLobby(Game *pGame);
-
-Uint32 decreaseMatchTime(Uint32 interval, void *param);
 void getInputIp(Game *pGame);
-
 void handleGameOverText(Game *pGame);
 
 int main(int argc, char *argv[]) {
@@ -150,13 +135,9 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    for (int i = 0; i < MAX_PADDLES; i++){
-        pGame->pPaddle[i] = createPaddle( pGame->pRenderer, WINDOW_WIDTH, WINDOW_HEIGHT, i);
-    }
+    for (int i = 0; i < MAX_PADDLES; i++) pGame->pPaddle[i] = createPaddle( pGame->pRenderer, WINDOW_WIDTH, WINDOW_HEIGHT, i);
 
-    for(int i = 0; i < MAX_PADDLES; i++){
-        pGame->connected[i] = false;
-    }
+    for(int i = 0; i < MAX_PADDLES; i++) pGame->connected[i] = false;
 
     pGame->nrOfPaddles = MAX_PADDLES;
 
@@ -189,7 +170,6 @@ int initiate(Game *pGame){
     pGame->teamScores[0] = 0;
     pGame->teamScores[1] = 0;
     pGame->state = START;
-    //pGame->matchTime = 300000; // 5 minuter, millisekunder
 
     return 1;
 }
@@ -198,11 +178,6 @@ void run(Game *pGame){
     int closeRequested = 0;
     SDL_Event event;
     ClientData clientData;
-
-    //Uint32 lastTick = SDL_GetTicks();
-    //Uint32 currentTick= SDL_GetTicks();
-    //float deltaTime;
-    //SDL_TimerID timerId = 0;
     int joining = 0;
     pGame->hostConnected = false;
     strcpy(pGame->pIp, "Nothing yet...");
@@ -210,18 +185,7 @@ void run(Game *pGame){
     while(!closeRequested){
         switch(pGame->state){
             case ONGOING:
-                //printf("Ongoing\n");
-                /*if(timerId == 0){
-                    timerId = SDL_AddTimer(1000, decreaseMatchTime, pGame);
-                }
-                
-                /*currentTick = SDL_GetTicks();
-                deltaTime = (currentTick - lastTick) / 1000.0f;
-                lastTick = currentTick;*/
-
-                while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)){
-                    updateWithServerData(pGame);
-                }
+                while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)) updateWithServerData(pGame);
 
                 if(SDL_PollEvent(&event)){
                     if(event.type == SDL_QUIT){
@@ -229,19 +193,14 @@ void run(Game *pGame){
                     } else handleInput(pGame, &event);
                 }
 
-                for(int i = 0; i < MAX_PADDLES; i++){
-                    updatePaddlePosition(pGame->pPaddle[i]);
-                }
-                updateBallPosition(pGame->pBall);
-                //updateWithServerData(pGame); // Skicka uppdaterad poäng till klienter
+                /*for(int i = 0; i < MAX_PADDLES; i++) updatePaddlePosition(pGame->pPaddle[i]);
+                updateBallPosition(pGame->pBall);*/
                 renderGame(pGame);
                 SDL_RenderPresent(pGame->pRenderer);
                 break;
             
             case GAME_OVER:
-                //Uint32 gameOverTime = SDL_GetTicks();
                 handleGameOverText(pGame);
-
                 while(!closeRequested){
                     while(SDL_PollEvent(&event)){
                         if(event.type == SDL_QUIT){
@@ -254,12 +213,10 @@ void run(Game *pGame){
             
             case START:
                 renderLobby(pGame);
-
                 if(SDL_PollEvent(&event)){
                     if(event.type == SDL_QUIT){
                         closeRequested = 1;
                     } 
-                    
                     else if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN){
                         getInputIp(pGame);
                         
@@ -267,16 +224,13 @@ void run(Game *pGame){
                             printf("SDLNet_ResolveHost(%s 2000): %s\n", pGame->pIp, SDLNet_GetError());
                             closeGame(pGame);
                         }
-
                         joining = 1;
                         clientData.command = READY;
                         clientData.clientNumber = -1;
                         memcpy(pGame->pPacket->data, &clientData, sizeof(ClientData));
                         pGame->pPacket->len = sizeof(ClientData);
-                        for(int i = 0; i < 20; i++){
-                            SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
-                        }
-
+                        for(int i = 0; i < 20; i++) SDLNet_UDP_Send(pGame->pSocket, -1, pGame->pPacket);
+                        
                         pGame->pPacket->address.host = pGame->serverAddress.host;
                         pGame->pPacket->address.port = pGame->serverAddress.port;
 
@@ -293,23 +247,17 @@ void run(Game *pGame){
                     }
                 }
                 break;
-
         }
         SDL_Delay(1000/60); // 60 FPS
     }
-    
-    //SDL_RemoveTimer(timerId);
 }
 
 void renderLobby(Game *pGame){
     SDL_RenderClear(pGame->pRenderer);
-
-
     SDL_RenderCopy(pGame->pRenderer, pGame->pLobbyTexture, NULL, NULL);
 
     char lobbyText[50], hostSpotText[50], spot1Text[50], spot2Text[50], spot3Text[50], spot4Text[50], inputIpText[50];
 
-    //Lobby-status
     if(pGame->hostConnected && pGame->paddleNr >= 0){
         snprintf(lobbyText, sizeof(lobbyText), "Lobby! You are paddle: %d", pGame->paddleNr + 1);
     } 
@@ -317,7 +265,6 @@ void renderLobby(Game *pGame){
         snprintf(lobbyText, sizeof(lobbyText), "Lobby! Waiting for paddle assignment");
     }
 
-    // Host-status
     snprintf(hostSpotText, sizeof(hostSpotText), pGame->hostConnected ? "Host is connected!" : "Host is not connected...");
 
     if (pGame->connected[0] == true){
@@ -326,30 +273,24 @@ void renderLobby(Game *pGame){
         snprintf(hostSpotText, sizeof(hostSpotText), "Host is not connected...");
         snprintf(spot1Text, sizeof(spot1Text), "Spot 1 is avaliable...");
     }
-
     if (pGame->connected[1] == true){
         snprintf(spot2Text, sizeof(spot2Text), "Player 2 is connected!");
     } else {
         snprintf(spot2Text, sizeof(spot2Text), "Spot 2 is avaliable...");
     }
-
     if (pGame->connected[2] == true){
         snprintf(spot3Text, sizeof(spot3Text), "Player 3 is connected!");
     } else {
         snprintf(spot3Text, sizeof(spot3Text), "Spot 3 is avaliable...");
     }
-
     if (pGame->connected[3] == true){
         snprintf(spot4Text, sizeof(spot4Text), "Player 4 is connected!");
     } else {
         snprintf(spot4Text, sizeof(spot4Text), "Spot 4 is avaliable...");
     }
-
     snprintf(inputIpText, sizeof(inputIpText), "Press Enter to enter IP");
 
-
     pGame->pLobbyText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, lobbyText, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 - 75);
-
     pGame->pHostSpotText = createText(pGame->pRenderer, 80, 200, 190, pGame->pFont, hostSpotText, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 25);
     pGame->pSpot1Text = createText(pGame->pRenderer, 80, 200, 190, pGame->pFont, spot1Text, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75);
     pGame->pSpot2Text = createText(pGame->pRenderer, 80, 200, 190, pGame->pFont, spot2Text, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 125);
@@ -366,7 +307,6 @@ void renderLobby(Game *pGame){
     drawText(pGame->pSpot2Text);
     drawText(pGame->pSpot3Text);
     drawText(pGame->pSpot4Text);
-
     destroyText(pGame->pLobbyText);
     destroyText(pGame->pHostSpotText);
     destroyText(pGame->pSpot1Text);
@@ -383,23 +323,16 @@ void renderGame(Game *pGame){
     SDL_RenderClear(pGame->pRenderer);
     SDL_RenderCopy(pGame->pRenderer, pGame->backgroundTexture, NULL, NULL);
 
-    int minutes = pGame->matchTime / 60000;
-    int seconds = (pGame->matchTime % 60000) / 1000;
+    char goalsTeamAString[10], goalsTeamBString[10];
 
-    char timeString[10], goalsTeamAString[10], goalsTeamBString[10];
-
-    sprintf(timeString, "%02d:%02d", minutes, seconds);
     snprintf(goalsTeamAString, sizeof(goalsTeamAString), "%d", pGame->teamScores[0]);
     snprintf(goalsTeamBString, sizeof(goalsTeamBString), "%d", pGame->teamScores[1]);
 
-    pGame->pMatchTimeText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, timeString, WINDOW_WIDTH - 200, 20);
     pGame->pGoalsTeamAText = createText(pGame->pRenderer, 255, 255, 255, pGame->pScoreFont, goalsTeamAString, (WINDOW_WIDTH / 2) - 50 , 50);
     pGame->pGoalsTeamBText = createText(pGame->pRenderer, 255, 255, 255, pGame->pScoreFont, goalsTeamBString, (WINDOW_WIDTH / 2) + 50, 50);
 
-    drawText(pGame->pMatchTimeText);
     drawText(pGame->pGoalsTeamAText);
     drawText(pGame->pGoalsTeamBText);
-    destroyText(pGame->pMatchTimeText);
     destroyText(pGame->pGoalsTeamAText);
     destroyText(pGame->pGoalsTeamBText);
 
@@ -428,13 +361,8 @@ void updateWithServerData(Game *pGame){
     for(int i = 0; i < MAX_PADDLES; i++)
     {
         updatePaddleWithRecievedData(pGame->pPaddle[i], &(serverData.paddles[i]));
-    }
-
-    for(int i = 0; i < MAX_PADDLES; i++)
-    {
         pGame->connected[i] = serverData.connected[i];
     }
-    
     updateBallWithRecievedData(pGame->pBall, &(serverData.ball));
 }
 
@@ -470,7 +398,6 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
         SDLNet_UDP_Send(pGame->pSocket, -1,pGame->pPacket);
     }
 
-    // Hantera tangentuppsläpp för att nollställa velocity
     else if (pEvent->type == SDL_KEYUP) {
         bool sendReset = false;
         switch (pEvent->key.keysym.scancode) {
@@ -478,7 +405,6 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
             case SDL_SCANCODE_UP:
             case SDL_SCANCODE_S:
             case SDL_SCANCODE_DOWN:
-                // Kontrollera att ingen Y-rörelse-tangent är nedtryckt
                 if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_UP] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_DOWN]) {
                     resetPaddleSpeed(pGame->pPaddle[clientData.clientNumber], 0, 1);
                     clientData.command = RESET_VELOCITY_Y;
@@ -489,7 +415,6 @@ void handleInput(Game *pGame, SDL_Event *pEvent){
             case SDL_SCANCODE_LEFT:
             case SDL_SCANCODE_D:
             case SDL_SCANCODE_RIGHT:
-                // Kontrollera att ingen X-rörelse-tangent är nedtryckt
                 if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LEFT] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D] && !SDL_GetKeyboardState(NULL)[SDL_SCANCODE_RIGHT]) {
                     resetPaddleSpeed(pGame->pPaddle[clientData.clientNumber], 1, 0);
                     clientData.command = RESET_VELOCITY_X;
@@ -524,16 +449,6 @@ void handleGameOverText(Game *pGame){
     }
 }
 
-Uint32 decreaseMatchTime(Uint32 interval, void *param){
-    Game *pGame = (Game *)param;
-    if(pGame->matchTime > 0){
-        pGame->matchTime -= 1000; // Decrease by 1 second
-    } else {
-        pGame->state = GAME_OVER;
-    }
-    return interval; // Continue the timer
-}
-
 void getInputIp(Game *pGame){
     SDL_StartTextInput();
     SDL_RenderClear(pGame->pRenderer);
@@ -554,7 +469,7 @@ void getInputIp(Game *pGame){
             }
             else if(event.type == SDL_KEYDOWN){
                 if(event.key.keysym.sym == SDLK_BACKSPACE && strlen(input) > 0){
-                    input[strlen(input) - 1] = '\0'; // Remove last character
+                    input[strlen(input) - 1] = '\0';
                 }
                 else if(event.key.keysym.sym == SDLK_RETURN){
                     if(strlen(input) > 0){
@@ -568,7 +483,7 @@ void getInputIp(Game *pGame){
         SDL_RenderCopy(pGame->pRenderer, pGame->pLobbyTexture, NULL, NULL);
 
         snprintf(inputIp, sizeof(inputIp), "Enter IP: ");
-        pGame->pEnterIpText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, inputIp, WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 50);
+        pGame->pEnterIpText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, inputIp, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 - 50);
         drawText(pGame->pEnterIpText);
         destroyText(pGame->pEnterIpText);
 
@@ -596,7 +511,6 @@ void closeGame(Game *pGame){
     if (pGame->pWindow) SDL_DestroyWindow(pGame->pWindow);
     if (pGame->backgroundTexture) SDL_DestroyTexture(pGame->backgroundTexture);
     if (pGame->pIpTexture) SDL_DestroyTexture(pGame->pIpTexture);
-
     if(pGame->pLobbyText) destroyText(pGame->pLobbyText);
     if(pGame->pSpot1Text) destroyText(pGame->pSpot1Text);
     if(pGame->pSpot2Text) destroyText(pGame->pSpot2Text);
@@ -605,7 +519,6 @@ void closeGame(Game *pGame){
     if(pGame->pHostSpotText) destroyText(pGame->pHostSpotText);
     if(pGame->pGoalsTeamAText) destroyText(pGame->pGoalsTeamAText);
     if(pGame->pGoalsTeamBText) destroyText(pGame->pGoalsTeamBText);
-    if(pGame->pMatchTimeText) destroyText(pGame->pMatchTimeText);
     if(pGame->pTeamAText) destroyText(pGame->pTeamAText);
     if(pGame->pTeamBText) destroyText(pGame->pTeamBText);
     if(pGame->pIpText) destroyText(pGame->pIpText);

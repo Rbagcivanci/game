@@ -89,14 +89,6 @@ int checkCollision(SDL_Rect rect1, SDL_Rect rect2){
     return SDL_HasIntersection(&rect1, &rect2); //Kolla om boll kolliderar med annat
 }
 
-/*int checkGoal(Ball *pBall){
-    SDL_Rect ballRect = getBallRect(pBall); //Hämta rektangel för bollen
-    if(ballRect.x < 0 || ballRect.x > WINDOW_WIDTH - BALL_SIZE){
-        return 1;
-    }
-    return 0; //Inga mål
-}*/
-
 int goalScored(Ball *pBall) {
     SDL_Rect ballRect = getBallRect(pBall);
 
