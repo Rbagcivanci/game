@@ -35,6 +35,7 @@ typedef struct game {
     int teamScores[2];
     int nrOfClients, nrOfPaddles;
     bool goalJustScored;
+    bool hostConnected;
 
     UDPsocket pSocket;
     UDPpacket *pPacket;
@@ -48,7 +49,7 @@ void renderGame(Game *pGame);
 void renderLobby(Game *pGame);
 void handleInput(Game *pGame, SDL_Event *pEvent);
 
-void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, Game *pGame);
+void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, bool connected[]);
 void sendGameData(Game *pGame);
 void executeCommand(Game *pGame, ClientData clientData);
 
@@ -227,9 +228,11 @@ void run(Game *pGame){
 
                 if(SDL_PollEvent(&event) && event.type == SDL_QUIT) closeRequested=1;
                 if(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)==1){
-                    addClient(pGame->pPacket->address, pGame->clients, &(pGame->nrOfClients), pGame);
+                    addClient(pGame->pPacket->address, pGame->clients, &(pGame->nrOfClients), pGame->connected);
+                    sendGameData(pGame);
                     if(pGame->nrOfClients == MAX_PADDLES) setUpGame(pGame);
                 }
+                sendGameData(pGame);
                 break;
         }
         SDL_Delay(1000/60);
@@ -255,7 +258,7 @@ void sendGameData(Game *pGame){
     pGame->serverData.gState = pGame->state;
     pGame->serverData.teamScores[0] = pGame->teamScores[0];
     pGame->serverData.teamScores[1] = pGame->teamScores[1];
-    //pGame->serverData.hostConnected = true; // Servern är host
+    pGame->serverData.hostConnected = true; // Servern är host
 
     for(int i = 0; i < MAX_PADDLES; i++){
         getPaddleSendData(pGame->pPaddle[i], &(pGame->serverData.paddles[i]));
@@ -276,14 +279,14 @@ void sendGameData(Game *pGame){
     }
 }
 
-void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, Game *pGame){
+void addClient(IPaddress address, IPaddress clients[], int *pNrOfClients, bool connected[]){
     for(int i = 0; i < *pNrOfClients; i++){
         if(address.host == clients[i].host && address.port == clients[i].port){
             return;
         }
     }
     clients[*pNrOfClients] = address;
-    pGame->connected[*pNrOfClients] = true;
+    connected[*pNrOfClients] = true;
     (*pNrOfClients)++;
 }
 

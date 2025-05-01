@@ -27,7 +27,7 @@ Ball *createBall(SDL_Renderer *renderer) {
         return NULL;
     }
 
-    pBall->ballSurface = IMG_Load("../lib/resources/ball2.png"); // Surface med bild
+    pBall->ballSurface = IMG_Load("../lib/resources/ballPong.png"); // Surface med bild
     if (!pBall->ballSurface) { //Om bild inte lyckas skapas --> felmeddelande, släpp minne och returnera NULL
         fprintf(stderr, "Error loading pBall texture: %s\n", SDL_GetError());
         free(pBall);
