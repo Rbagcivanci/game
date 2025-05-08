@@ -4,6 +4,7 @@
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
 #define MAX_PADDLES 4
+#define MAXOBSTACLES 5
 
 #include <stdbool.h>
 
@@ -28,8 +29,14 @@ typedef struct paddleData{
     int yPos, xPos;
 } PaddleData;
 
+typedef struct obstacleData{
+    float positionX, positionY, velocityX, velocityY, angle;
+    bool active;
+} ObstacleData;
+
 typedef struct serverData{
     PaddleData paddles[MAX_PADDLES];
+    ObstacleData obstacles[MAXOBSTACLES];
     BallData ball;
     int clientNr;
     GameState gState;

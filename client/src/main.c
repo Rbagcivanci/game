@@ -11,6 +11,7 @@
 #include "paddle.h"
 #include "ball.h"
 #include "text.h"
+#include "obstacles.h"
 #define MOVEMENT_SPEED 5
 
 typedef struct game {
@@ -160,6 +161,8 @@ int initiate(Game *pGame){
             return 0;
         }
     }
+
+
 
     if(!pGame->pTeamAText || !pGame->pTeamBText || !pGame->pDrawText || !pGame->pGameOverText){
         printf("Error: %s\n",SDL_GetError());
