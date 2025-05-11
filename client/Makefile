@@ -4,7 +4,7 @@ INCDIR=../lib/include
 CC=gcc
 INCLUDE = -IC:/msys64/mingw64/include/SDL2 -I$(INCDIR)
 CFLAGS = -g $(INCLUDE) -c
-LDFLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_net -lm
+LDFLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_net -lSDL2_mixer -lm
 
 pongClient: main.o ball.o paddle.o text.o
 	$(CC) -o pongClient main.o ball.o text.o paddle.o $(LDFLAGS)
