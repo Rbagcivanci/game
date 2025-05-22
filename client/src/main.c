@@ -31,12 +31,11 @@ typedef struct game {
     bool hostConnected;
     char pIp[50];
     int teamScores[2];
+    Mix_Music *lobbySoundtrack;
     UDPsocket pSocket;
     IPaddress serverAddress;
     UDPpacket *pPacket;
 }Game;
-
-Mix_music *lobbySoundtrack;
 
 int initiate(Game *pGame);
 void run(Game *pGame);
@@ -100,14 +99,14 @@ int initiate(Game *pGame){
         return 0;
     }
 
-    if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048)<0){
+    if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
         printf("SDL_mixer Error: %s\n", Mix_GetError());
         return 0;
     }
 
-    pGame-lobbySoundtrack = Mix_LoadMUS("../lib/resources/lobbyMusik.mp3");
+    pGame->lobbySoundtrack = Mix_LoadMUS("../lib/resources/lobbyMusik.mp3");
     if (!pGame->lobbySoundtrack) {
-        printf("Kunde inte ladda upp lobby musik: %s\n", Mix_GetError):
+        printf("Kunde inte ladda upp lobby musik: %s\n", Mix_GetError());
         return 0;
     }
 
@@ -176,8 +175,6 @@ int initiate(Game *pGame){
         }
     }
 
-
-
     if(!pGame->pTeamAText || !pGame->pTeamBText || !pGame->pDrawText || !pGame->pGameOverText){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
@@ -202,9 +199,7 @@ void run(Game *pGame){
     while(!closeRequested){
         switch(pGame->state){
             case ONGOING:
-                if (!Mix_PlayingMusic()) {
-                    Mix_HaltMusic();
-                }
+                Mix_HaltMusic();
 
                 while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)) updateWithServerData(pGame);
 
@@ -234,7 +229,9 @@ void run(Game *pGame){
             
             case START:
                 if (!Mix_PlayingMusic()) {
-                    Mix_PlayMusic(pGame->lobbySoundtrack, -1);
+                    Mix_PlayMusic(pGame->lobbySoundtrack, -1) == -1; {
+                        printf("Kunde inte spela upp musiken: %s\n", Mix_GetError);
+                    }
                 }
                 renderLobby(pGame);
                 if(SDL_PollEvent(&event)){
