@@ -9,6 +9,7 @@
 #include "paddle.h"
 #include "text.h"
 #include "ball.h"
+#include "obstacles.h"
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
 #define MOVEMENT_SPEED 300
@@ -119,6 +120,7 @@ int initiate(Game *pGame){
 
     pGame->nrOfPaddles = MAX_PADDLES;
     pGame->pBall = createBall(pGame->pRenderer);
+    init_obstacles();
     pGame->pOngoingText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game has begun", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
     pGame->pOverText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Game Over", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
     pGame->pStartText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Waiting for clients...", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
@@ -127,6 +129,8 @@ int initiate(Game *pGame){
         closeGame(pGame);
         return 0;
     }
+
+
     if(!pGame->pOverText || !pGame->pStartText || !pGame->pOngoingText){
         printf("Error: %s\n",SDL_GetError());
         closeGame(pGame);
@@ -169,6 +173,7 @@ void run(Game *pGame){
                     handlePaddleBallCollision(getPaddleRect(pGame->pPaddle[i]), getBallRect(pGame->pBall), pGame->pBall);
                 }
                 updateBallPosition(pGame->pBall);
+                check_obstacle_collisions(pGame->pBall);
                 restrictBallWithinWindow(pGame->pBall);
 
                 for(int i = 0; i < pGame->nrOfPaddles - 1; i++){
@@ -182,6 +187,8 @@ void run(Game *pGame){
                     for (int i = 0; i < pGame->nrOfPaddles; i++) {
                         setStartingPosition(pGame->pPaddle[i], i, WINDOW_WIDTH, WINDOW_HEIGHT);
                     }
+                    reset_obstacles();
+                    spawn_obstacles();
                     serveBall(pGame->pBall, (rand() % 2) * 2 - 1);
                 }
                 sendGameData(pGame); // Skicka uppdaterad poäng till klienter
@@ -230,6 +237,7 @@ void setUpGame(Game *pGame){
     float initialVelocityY = SPEED;
     setBallVelocity(pGame->pBall, initialVelocityX, initialVelocityY);
     serveBall(pGame->pBall, value);
+    spawn_obstacles();
     pGame->nrOfPaddles = MAX_PADDLES;
     pGame->state = ONGOING;
 }
@@ -249,6 +257,7 @@ void sendGameData(Game *pGame){
     }
 
     sendBallData(pGame->pBall, &(pGame->serverData.ball));
+    send_obstacle_data(pGame -> serverData.obstacles);
     
     for (int i = 0; i < pGame->nrOfClients; i++){
         pGame->serverData.clientNr = i;

@@ -11,6 +11,7 @@
 #include "paddle.h"
 #include "ball.h"
 #include "text.h"
+#include "obstacles.h"
 #define MOVEMENT_SPEED 5
 
 typedef struct game {
@@ -147,6 +148,8 @@ int initiate(Game *pGame){
         closeGame(pGame);
         return 0;
     }
+
+    init_obstacles();
 
     pGame->pTeamAText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team A Won", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 150);
     pGame->pTeamBText = createText(pGame->pRenderer, 255, 255, 255, pGame->pFont, "Team B Won", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 150);
@@ -336,6 +339,8 @@ void renderGame(Game *pGame){
     destroyText(pGame->pGoalsTeamAText);
     destroyText(pGame->pGoalsTeamBText);
 
+    render_obstacles(pGame -> pRenderer);
+
     for(int i = 0; i < MAX_PADDLES; i++){
         Paddle *pPaddle = pGame->pPaddle[i];
         SDL_Rect paddleRect = getPaddleRect(pPaddle);
@@ -364,6 +369,7 @@ void updateWithServerData(Game *pGame){
         pGame->connected[i] = serverData.connected[i];
     }
     updateBallWithRecievedData(pGame->pBall, &(serverData.ball));
+    update_obstacles_with_received_data(serverData.obstacles);
 }
 
 void handleInput(Game *pGame, SDL_Event *pEvent){

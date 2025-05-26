@@ -12,13 +12,6 @@
 #define BALL_SIZE 10
 #define SPEED  5.1f
 
-struct ball {
-    SDL_Texture *ballTexture;
-    SDL_Rect ballRect;
-    SDL_Surface *ballSurface;
-    float velocityY, velocityX;
-    float ballX, ballY;
-};
 
 Ball *createBall(SDL_Renderer *renderer) {
     Ball *pBall = malloc(sizeof(Ball));

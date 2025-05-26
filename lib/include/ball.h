@@ -3,6 +3,14 @@
 
 #include <stdbool.h>
 
+struct ball {
+    SDL_Texture *ballTexture;
+    SDL_Rect ballRect;
+    SDL_Surface *ballSurface;
+    float velocityY, velocityX;
+    float ballX, ballY;
+};
+
 typedef struct ball Ball;
 typedef struct ballData BallData;
 

@@ -4,6 +4,7 @@
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
 #define MAX_PADDLES 4
+#define MAX_OBSTACLES 4
 
 #include <stdbool.h>
 
@@ -12,6 +13,19 @@ typedef enum gameState GameState;
 
 enum clientCommand{READY, UP, DOWN, LEFT, RIGHT, RESET_VELOCITY_X, RESET_VELOCITY_Y, RESTRICT_PLAYER};
 typedef enum clientCommand ClientCommand;
+
+typedef enum{
+    SHAPE_RECTANGLE,
+    SHAPE_CIRCLE,
+    SHAPE_TRIANGLE
+} ShapeType;
+
+typedef struct {
+    ShapeType type;
+    float x, y, width, height;
+    Uint8 r, g, b, a;
+    bool active;
+} ObstacleData;
 
 typedef struct clientData{
     ClientCommand command;
@@ -31,6 +45,7 @@ typedef struct paddleData{
 typedef struct serverData{
     PaddleData paddles[MAX_PADDLES];
     BallData ball;
+    ObstacleData obstacles[MAX_OBSTACLES];
     int clientNr;
     GameState gState;
     bool connected[MAX_PADDLES];
