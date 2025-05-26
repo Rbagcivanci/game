@@ -4,11 +4,7 @@
 #define WINDOW_WIDTH 1300
 #define WINDOW_HEIGHT 800
 #define MAX_PADDLES 4
-<<<<<<< HEAD
 #define MAX_OBSTACLES 4
-=======
-#define MAXOBSTACLES 5
->>>>>>> 05b5cd4f38921a10c86dc01d9e90af2c9f13314f
 
 #include <stdbool.h>
 
