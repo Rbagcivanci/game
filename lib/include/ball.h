@@ -30,5 +30,6 @@ void restrictBallWithinWindow(Ball *pBall);
 void sendBallData(Ball *pBall, BallData *pBallData);
 void updateBallWithRecievedData(Ball *pBall, BallData *pBallData);
 void serveBall(Ball *pBall, int direction);
+void handleBallObstacleCollision(SDL_Rect obstacleRect, SDL_Rect ballRect, Ball *pBall);
 
 #endif // BALL_H

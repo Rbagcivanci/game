@@ -172,6 +172,7 @@ void run(Game *pGame){
                     restrictPaddleWithinWindow(pGame->pPaddle[i], WINDOW_WIDTH, WINDOW_HEIGHT);
                     handlePaddleBallCollision(getPaddleRect(pGame->pPaddle[i]), getBallRect(pGame->pBall), pGame->pBall);
                 }
+
                 updateBallPosition(pGame->pBall);
                 check_obstacle_collisions(pGame->pBall);
                 restrictBallWithinWindow(pGame->pBall);

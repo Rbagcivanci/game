@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include "paddle_data.h"
 #include "ball.h"
+#include "obstacles.h"
 #include <SDL_image.h>
 #include <stdbool.h> 
 
@@ -135,6 +136,19 @@ void handlePaddleBallCollision(SDL_Rect paddleRect, SDL_Rect ballRect, Ball *pBa
         }
     }
 }
+
+void handleBallObstacleCollision(SDL_Rect obstacleRect, SDL_Rect ballRect, Ball *pBall){
+    if(checkCollision(obstacleRect, ballRect)){
+        pBall->velocityX = -pBall->velocityX;
+        pBall->velocityY = -pBall->velocityY;
+        if(ballRect.x < obstacleRect.x){
+            setBallX(pBall, obstacleRect.x - BALL_SIZE - 1);
+        } else {
+            setBallX(pBall, obstacleRect.x + obstacleRect.w + 1);
+        }
+    }
+}
+
 void serveBall(Ball *pBall, int direction){
     setBallX(pBall, WINDOW_WIDTH / 2 - BALL_SIZE / 2);
     setBallY(pBall, WINDOW_HEIGHT / 2 - BALL_SIZE / 2);

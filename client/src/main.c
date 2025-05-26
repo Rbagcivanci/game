@@ -7,6 +7,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <SDL_net.h>
+#include <SDL_mixer.h>
 #include "paddle_data.h"
 #include "paddle.h"
 #include "ball.h"
@@ -30,6 +31,7 @@ typedef struct game {
     bool hostConnected;
     char pIp[50];
     int teamScores[2];
+    Mix_Music *lobbySoundtrack;
     UDPsocket pSocket;
     IPaddress serverAddress;
     UDPpacket *pPacket;
@@ -94,6 +96,17 @@ int initiate(Game *pGame){
     if(!pGame->pFont || !pGame->pScoreFont || !pGame->pGameOverFont){
         printf("Error: %s\n",TTF_GetError());
         closeGame(pGame);
+        return 0;
+    }
+
+    if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+        printf("SDL_mixer Error: %s\n", Mix_GetError());
+        return 0;
+    }
+
+    pGame->lobbySoundtrack = Mix_LoadMUS("../lib/resources/lobbyMusik.mp3");
+    if (!pGame->lobbySoundtrack) {
+        printf("Kunde inte ladda upp lobby musik: %s\n", Mix_GetError());
         return 0;
     }
 
@@ -188,6 +201,8 @@ void run(Game *pGame){
     while(!closeRequested){
         switch(pGame->state){
             case ONGOING:
+                Mix_HaltMusic();
+
                 while(SDLNet_UDP_Recv(pGame->pSocket, pGame->pPacket)) updateWithServerData(pGame);
 
                 if(SDL_PollEvent(&event)){
@@ -215,6 +230,11 @@ void run(Game *pGame){
                 break;
             
             case START:
+                if (!Mix_PlayingMusic()) {
+                    Mix_PlayMusic(pGame->lobbySoundtrack, -1) == -1; {
+                        printf("Kunde inte spela upp musiken: %s\n", Mix_GetError);
+                    }
+                }
                 renderLobby(pGame);
                 if(SDL_PollEvent(&event)){
                     if(event.type == SDL_QUIT){
@@ -530,7 +550,9 @@ void closeGame(Game *pGame){
     if(pGame->pIpText) destroyText(pGame->pIpText);
     if(pGame->pEnterIpText) destroyText(pGame->pEnterIpText);
     if(pGame->pFont) TTF_CloseFont(pGame->pFont);
+    if(pGame->lobbySoundtrack) Mix_FreeMusic(pGame->lobbySoundtrack);
 
+    Mix_CloseAudio();
     SDLNet_Quit();
     TTF_Quit();
     SDL_Quit();
