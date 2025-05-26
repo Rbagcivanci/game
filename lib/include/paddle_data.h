@@ -16,14 +16,14 @@ typedef enum clientCommand ClientCommand;
 
 typedef enum{
     SHAPE_RECTANGLE,
-    SHAPE_CIRCLE,
-    SHAPE_TRIANGLE
+    SHAPE_CIRCLE
 } ShapeType;
 
 typedef struct {
     ShapeType type;
     float x, y, width, height;
     Uint8 r, g, b, a;
+    float positionX, positionY, velocityX, velocityY, angle;
     bool active;
 } ObstacleData;
 
@@ -42,16 +42,12 @@ typedef struct paddleData{
     int yPos, xPos;
 } PaddleData;
 
-typedef struct obstacleData{
-    float positionX, positionY, velocityX, velocityY, angle;
-    bool active;
-} ObstacleData;
+
 
 typedef struct serverData{
     PaddleData paddles[MAX_PADDLES];
-    ObstacleData obstacles[MAXOBSTACLES];
-    BallData ball;
     ObstacleData obstacles[MAX_OBSTACLES];
+    BallData ball;
     int clientNr;
     GameState gState;
     bool connected[MAX_PADDLES];
